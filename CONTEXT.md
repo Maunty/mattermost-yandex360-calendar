@@ -1,0 +1,47 @@
+# Mattermost Yandex Calendar
+
+A Mattermost plugin that surfaces a person's Yandex Calendar inside Mattermost: a Reminder shortly before each Event, and a once-daily list of that day's Events.
+
+## Language
+
+### People and accounts
+
+**Organization**:
+A Yandex 360 for Business organization. Its owner provisions the plugin's access to members' calendars.
+_Avoid_: tenant, workspace, company, org
+
+**Standalone Account**:
+A Yandex account that belongs to no Organization.
+_Avoid_: personal account, private account, free account
+
+**Service Application**:
+The Yandex 360 credential an Organization owner registers, which lets the plugin act for a member without that member's involvement.
+_Avoid_: service account, app, integration credential
+
+**Connection**:
+The link between one Mattermost user and the Yandex Calendar the plugin reads for them, established by OAuth consent and held as a refreshable token.
+_Avoid_: account, link, integration, binding
+
+### Calendars and events
+
+**Own Calendar**:
+The calendar belonging to a single person, read for them through their Connection.
+_Avoid_: personal calendar, my calendar, private calendar
+
+**Shared Calendar**:
+A calendar readable by several people and surfaced to a group rather than an individual. Out of scope for v1.
+_Avoid_: team calendar, room calendar, group calendar
+
+**Event**:
+A single scheduled occurrence in a calendar.
+_Avoid_: meeting, appointment, entry, booking
+
+### What the plugin sends
+
+**Reminder**:
+A one-off message sent to one person shortly before one Event begins.
+_Avoid_: notification, alert, ping, heads-up
+
+**Daily Summary**:
+The once-a-day message listing that person's Events for the day.
+_Avoid_: agenda, daily agenda, digest, brief
