@@ -74,7 +74,7 @@ Go's `time.LoadLocation` takes these directly. mscalendar's `windowsToIANA` tabl
 
 ## Still unverified
 
-- **Whether a plain (non-service-application) OAuth token authenticates over CalDAV.** Untestable without a token, which requires knowing whether a calendar scope exists — still the top open item.
+- ~~**Whether a plain (non-service-application) OAuth token authenticates over CalDAV.**~~ Settled by probes 3 and 4 below: it does, with `calendar:all`.
 - **Rate limits.** Six requests drew no throttling; that establishes nothing about sustained polling. Needs a deliberate load probe before the interval is fixed.
 - **Whether `sync-collection` accepts a `limit`**, which would make initial sync affordable.
 
@@ -190,3 +190,29 @@ Document this prominently in the admin setup instructions, with the probe table 
 ## Unresolved
 
 `calendar:write_all` was not tested in isolation, so it is not strictly proven that write capability specifically is what CalDAV checks — only that `calendar:all` works and the two read-only scopes do not.
+
+---
+
+# Spike 5: the REST API was looked for again, and not found
+
+**Date:** 2026-09-24. Recorded in full in [rest-api-spike.md](./rest-api-spike.md).
+
+Probe 2 could not locate a REST calendar API by guessing endpoints, and left
+open that one might be documented somewhere it had not looked, or might have
+appeared since. Both were checked:
+
+- The **Yandex 360 API reference** now documents twenty services. None of them
+  is a calendar. The 404s probe 2 saw on `api360.yandex.net/calendar/*` are
+  confirmed as genuine absence rather than an undocumented route.
+- `yandex.ru/dev/calendar/` returns **404**. There is no developer
+  documentation for Yandex Calendar at the conventional location.
+- An independent **IntelliJ IDEA plugin** published in January 2026 also uses
+  CalDAV with an app password, having evidently found no REST API either. It
+  hardcodes `events-default`, the collection name finding 4 above proved does
+  not exist on real accounts.
+
+**Not attempted:** reading the Yandex Calendar web client's own network traffic
+in browser developer tools, which needs a live signed-in account. That remains
+the one route that could overturn this, and it is described in the spike file.
+
+**Verdict: CalDAV is the transport. Recurrence is expanded client-side.**
