@@ -8,6 +8,10 @@
 #   cp dev/.env.example dev/.env   # then edit it
 #   make dev-up
 #
+# Every value has a working default, so this also comes up untouched — which is
+# what lets the dev container start it without a hand-written env file. The one
+# worth setting deliberately is MM_SITE_URL.
+#
 name: yandex-calendar-dev
 
 services:
@@ -16,7 +20,13 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-mmuser}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in dev/.env}
+      # Defaulted rather than required, so that "Reopen in Container" works
+      # before anyone has written a dev/.env. That is safe only because this
+      # whole stack is indefensible by design — plain HTTP, no signature
+      # checks, an admin socket in the container — and the thing keeping it
+      # safe is not exposing it, not this password. Change it anyway if the
+      # machine is shared.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mattermost-dev}
       POSTGRES_DB: ${POSTGRES_DB:-mattermost}
     volumes:
       - postgres-data:/var/lib/postgresql/data
@@ -42,7 +52,7 @@ services:
     environment:
       MM_SQLSETTINGS_DRIVERNAME: postgres
       MM_SQLSETTINGS_DATASOURCE: >-
-        postgres://${POSTGRES_USER:-mmuser}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-mattermost}?sslmode=disable&connect_timeout=10
+        postgres://${POSTGRES_USER:-mmuser}:${POSTGRES_PASSWORD:-mattermost-dev}@postgres:5432/${POSTGRES_DB:-mattermost}?sslmode=disable&connect_timeout=10
 
       # The single most important setting here. The plugin builds its OAuth
       # redirect from this, and Yandex refuses a callback that does not match

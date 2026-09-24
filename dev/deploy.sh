@@ -19,10 +19,9 @@ set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo="$(dirname "$here")"
 
-if [[ -f "$here/.env" ]]; then
-	# shellcheck disable=SC1091
-	set -a && . "$here/.env" && set +a
-fi
+# shellcheck disable=SC1091
+. "$here/_env.sh"
+load_dev_env "$here/.env"
 
 server_url="${MM_SERVER_URL:-http://localhost:8065}"
 server_url="${server_url%/}"

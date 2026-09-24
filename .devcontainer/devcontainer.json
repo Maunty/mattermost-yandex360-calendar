@@ -1,12 +1,41 @@
 {
 	"name": "Yandex Calendar for Mattermost",
-	"build": {
-		"dockerfile": "Dockerfile"
+
+	// Two files: the server stack, then the workspace container that joins it.
+	// dev/compose.yml comes first, which makes dev/ the compose project
+	// directory — so dev/.env is picked up automatically, and relative paths
+	// in both files resolve against dev/.
+	"dockerComposeFile": [
+		"../dev/compose.yml",
+		"docker-compose.yml"
+	],
+	"service": "app",
+	"workspaceFolder": "/workspaces/mattermost-ya-calendar",
+
+	// Everything, so that opening the repo gives a server to deploy into
+	// rather than a toolchain and a to-do list.
+	"runServices": [
+		"app",
+		"postgres",
+		"mattermost"
+	],
+	"shutdownAction": "stopCompose",
+
+	// Mattermost, for your browser. This is the address that has to match
+	// MM_SITE_URL and the redirect URI registered at Yandex.
+	"forwardPorts": [
+		8065
+	],
+	"portsAttributes": {
+		"8065": {
+			"label": "Mattermost",
+			"onAutoForward": "notify"
+		}
 	},
 
-	// Left explicit because it is load-bearing rather than incidental: go.mod
-	// pins a specific patch release, and this is what goes and gets it.
 	"containerEnv": {
+		// Load-bearing rather than incidental: go.mod pins a patch release,
+		// and this is what goes and gets it.
 		"GOTOOLCHAIN": "auto"
 	},
 
@@ -16,7 +45,7 @@
 				"golang.go"
 			],
 			"settings": {
-				// `make check` fails if `gofmt -l .` prints anything, so the
+				// `make check` fails on anything `gofmt -l .` prints, so the
 				// editor has to format with gofmt and nothing else. Letting it
 				// default to goimports or gofumpt would mean saving a file
 				// could break the build.
@@ -31,10 +60,6 @@
 					"-count=1"
 				],
 				"go.testTimeout": "120s",
-
-				// One CPU and under a gigabyte of headroom on the machine this
-				// was written for. Background tool downloads and a language
-				// server indexing on every keystroke are felt there.
 				"go.toolsManagement.autoUpdate": false,
 
 				"[go]": {
@@ -51,8 +76,8 @@
 	},
 
 	// Warms the module cache so the first `make test` is not also the first
-	// download. Deliberately not `go build ./...`: on one core that is a slow
-	// way to learn nothing the test run will not tell you.
+	// download. Deliberately not `go build ./...`: a slow way to learn nothing
+	// the test run will not tell you.
 	"postCreateCommand": "go mod download",
 
 	"remoteUser": "vscode"

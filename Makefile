@@ -68,58 +68,41 @@ clean:
 # a different machine from the one you build on: everything below except the
 # dev-* targets talks to it over HTTP.
 
-ENV_FILE = dev/.env
-COMPOSE = docker compose --env-file $(ENV_FILE) -f dev/compose.yml
-
-# Depending on this gives a useful message instead of a compose parse error.
-$(ENV_FILE):
-	@echo "$(ENV_FILE) is missing. Copy the example and edit it:"; \
-	 echo "    cp dev/.env.example $(ENV_FILE)"; \
-	 exit 1
+# dev/ is the compose project directory, so docker compose reads dev/.env by
+# itself when there is one. Every value has a working default, so there need
+# not be: the dev container starts this stack untouched.
+COMPOSE = docker compose -f dev/compose.yml
 
 ## dev-up starts the server. First start runs migrations and takes a minute.
 .PHONY: dev-up
-dev-up: $(ENV_FILE)
+dev-up:
 	$(COMPOSE) up -d
-	@set -a; . ./$(ENV_FILE); set +a; \
+	@set -a; [ -f dev/.env ] && . ./dev/.env; set +a; \
 	 echo "Mattermost is starting at $${MM_SITE_URL:-http://localhost:8065}"; \
 	 echo "Next: make dev-admin, then make deploy"
 
 ## dev-down stops the server and keeps its data.
 .PHONY: dev-down
-dev-down: $(ENV_FILE)
+dev-down:
 	$(COMPOSE) down
 
 ## dev-destroy stops the server and deletes its data, including the database,
 ## the uploaded plugin and the server config.
 .PHONY: dev-destroy
-dev-destroy: $(ENV_FILE)
+dev-destroy:
 	$(COMPOSE) down -v
 
 .PHONY: dev-logs
-dev-logs: $(ENV_FILE)
+dev-logs:
 	$(COMPOSE) logs -f
 
-## dev-admin creates the first system admin and a team to put it in, through
-## the container's local socket, because there is no admin yet to authenticate
-## as. Safe to re-run: it says so if they already exist.
+## dev-admin creates the first system admin and a team to put it in. The first
+## account on a Mattermost server is made a system admin and needs no
+## credentials to create, which is the way out of the chicken-and-egg problem.
+## Goes over HTTP, so it works from inside the dev container too. Re-runnable.
 .PHONY: dev-admin
-dev-admin: $(ENV_FILE)
-	@set -a; . ./$(ENV_FILE); set +a; \
-	 : "$${MM_ADMIN_USERNAME:?set MM_ADMIN_USERNAME in $(ENV_FILE)}"; \
-	 : "$${MM_ADMIN_PASSWORD:?set MM_ADMIN_PASSWORD in $(ENV_FILE)}"; \
-	 echo "==> Creating $$MM_ADMIN_USERNAME"; \
-	 $(COMPOSE) exec -T mattermost mmctl --local user create \
-		--email "$${MM_ADMIN_EMAIL:-$$MM_ADMIN_USERNAME@example.com}" \
-		--username "$$MM_ADMIN_USERNAME" \
-		--password "$$MM_ADMIN_PASSWORD" \
-		--system-admin || echo "    (already exists — carrying on)"; \
-	 echo "==> Creating the team"; \
-	 $(COMPOSE) exec -T mattermost mmctl --local team create \
-		--name dev --display-name "Dev" --private || echo "    (already exists — carrying on)"; \
-	 $(COMPOSE) exec -T mattermost mmctl --local team users add dev "$$MM_ADMIN_USERNAME" \
-		|| echo "    (already a member — carrying on)"; \
-	 echo "Sign in at $${MM_SITE_URL:-http://localhost:8065} as $$MM_ADMIN_USERNAME"
+dev-admin:
+	./dev/bootstrap.sh
 
 ## deploy builds the bundle and installs it on the server, wherever it is.
 .PHONY: deploy

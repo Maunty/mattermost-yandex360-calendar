@@ -1,0 +1,36 @@
+# The workspace container, added to the server stack in dev/compose.yml.
+#
+# The dev container composes the two files together, so opening the repo gives
+# you the toolchain and a Mattermost to deploy into, on one network, in one
+# command. dev/compose.yml is also usable on its own — see dev/README.md — so
+# that a machine which only hosts the server does not need any of this.
+#
+# Paths here resolve against the *first* compose file's directory, which is
+# dev/. That is why the workspace mount is `..` and not `../..`.
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+
+    # The dev container attaches to a running container; without this the
+    # image's own command would exit and take the container with it.
+    command: sleep infinity
+
+    volumes:
+      - ..:/workspaces/mattermost-ya-calendar:cached
+
+    environment:
+      # Where `make deploy` reaches the server *from in here*: a service name
+      # on the compose network, not the address a browser uses. The two are
+      # different, and conflating them is the usual way to lose an afternoon.
+      # MM_SITE_URL stays browser-facing, because Yandex redirects a browser.
+      MM_SERVER_URL: http://mattermost:8065
+
+    depends_on:
+      - mattermost
+
+    # Shares the server's network namespace-adjacent defaults; nothing else to
+    # declare, because compose puts every service on the same network.
+    networks:
+      - default

@@ -1,55 +1,65 @@
 # A Mattermost server to develop against
 
 The plugin runs inside Mattermost, so there is a limit to what the test suite
-can tell you. This brings up a real server in the 11 series with a real
-database, so the bundle can actually be installed and the consent flow actually
-walked through.
+can tell you. This is a real server in the 11 series with a real database, so
+the bundle can actually be installed and the consent flow actually walked
+through.
 
 **This is a development server.** Plain HTTP, an unauthenticated admin socket
-inside the container, plugin signature checks off, email verification off. It
-is fine on a machine you control and on a network you trust, and it is not fine
-anywhere else.
+inside the container, plugin signature checks off, email verification off, a
+default database password. It is fine on a machine you control and on a network
+you trust, and it is not fine anywhere else.
 
-It wants about **2 GB of memory** between the two containers, and Mattermost
-takes a minute or so to run its migrations on first start.
+It wants about **2 GB of memory** across the containers, and Mattermost takes a
+minute or two to run its migrations the first time.
 
-## Getting it up
+## The usual way: in the dev container
+
+`.devcontainer/` composes this stack together with a workspace container, so
+opening the repo gives you the toolchain and a server to deploy into at once.
+
+Open the repo in VS Code and choose **Reopen in Container**, or:
 
 ```sh
-cp dev/.env.example dev/.env
-$EDITOR dev/.env          # at minimum: POSTGRES_PASSWORD and MM_SITE_URL
-make dev-up
+devcontainer up --workspace-folder .
 ```
 
-Then create the first account. Mattermost has a chicken-and-egg problem here —
-you need an admin to do anything and there is no admin yet — so this goes
-through the container's local socket, which needs no credentials:
+Then, from a terminal inside it:
 
 ```sh
+make dev-admin    # the first system admin, and a team
+make deploy       # build, package, upload, enable
+```
+
+No `dev/.env` is needed — everything has a working default. Mattermost is on
+port 8065, forwarded to your browser.
+
+Inside the container, `MM_SERVER_URL` is already set to `http://mattermost:8065`,
+the service name on the compose network, because that is how one container
+reaches another. Your browser still uses `MM_SITE_URL`. Those two being
+different is normal and is the point of having both.
+
+## The other way: the server on its own
+
+A machine that only hosts the server does not need the dev container:
+
+```sh
+cp dev/.env.example dev/.env   # optional; set MM_SITE_URL if not localhost
+make dev-up
 make dev-admin
 ```
 
-That creates a system admin from `MM_ADMIN_USERNAME` / `MM_ADMIN_PASSWORD` in
-`dev/.env`, and a team to put it in. Sign in at whatever you set `MM_SITE_URL`
-to.
-
-## Getting the plugin in
+And then deploy to it from wherever you build, which does not have to be that
+machine:
 
 ```sh
-make deploy
+MM_SERVER_URL=http://dev-box.lan:8065 make deploy
 ```
-
-Builds for this machine, packages the bundle, uploads it and enables it. It
-talks to the server over HTTP, so the server does not have to be on the same
-machine as the build — point `MM_SERVER_URL` at it.
-
-Repeat it whenever you change the code. The upload replaces what is there and
-Mattermost restarts the plugin.
 
 ## Pointing it at Yandex
 
 [docs/admin-setup.md](../docs/admin-setup.md) is the real guide and is written
-for administrators, not just for this. The short version:
+for administrators. The short version:
 
 1. Register an application at <https://oauth.yandex.ru/client/new>, as a web
    service, with the scope **`calendar:all`** — and read
@@ -71,7 +81,7 @@ make dev-logs
 The plugin logs what it skipped and why — an event it could not read, a
 recurrence rule it could not expand, a provider that refused it. None of that
 is ever shown to a person, by design, so the log is the only place it exists.
-`MM_LOG_LEVEL=DEBUG` in `dev/.env` is what makes it visible.
+`MM_LOG_LEVEL=DEBUG` is what makes it visible, and it is the default here.
 
 ## Starting over
 
@@ -92,19 +102,27 @@ callback that is not character-for-character what the application has
 registered. `localhost` when the server is on another machine is the usual
 version of this.
 
-**Yandex will not accept the redirect URI.** Yandex may refuse a plain `http://`
-callback for a non-localhost host. If it does, the options are running this
-behind something that terminates TLS, or tunnelling to it — this compose file
-does not do either, deliberately: guessing at your TLS setup would be worse
-than leaving it to you.
+**Yandex will not accept the redirect URI.** It may refuse a plain `http://`
+callback for a host that is not localhost. If it does, the options are putting
+something that terminates TLS in front, or tunnelling to it. This compose file
+does neither, deliberately: guessing at your TLS setup would be worse than
+leaving it to you.
 
 **`make deploy` says the server never answered.** `MM_SERVER_URL` is where the
-*deploy script* reaches the server, which is not always the same string as
-`MM_SITE_URL` — the latter is where a *browser* reaches it.
+*scripts* reach the server, which is not always the same string as
+`MM_SITE_URL`, where a *browser* reaches it. Inside the dev container the first
+is a service name and the second is a host address.
+
+**`make dev-admin` says the account exists but cannot sign in.** The account
+predates the password now in `dev/.env`. Either use the real one, or
+`make dev-destroy` and start clean. If you would rather keep the data, the
+container has mmctl and a local admin socket:
+
+```sh
+docker compose -f dev/compose.yml exec mattermost \
+  mmctl --local user change-password admin --password 'NewPassword123!'
+```
 
 **Mattermost will not start.** First start runs migrations and needs the
-database to be up; compose waits for Postgres to pass its health check, but a
-machine short on memory can still have it killed. `make dev-logs` says which.
-
-**Sign-in fails during `make deploy`.** The account does not exist yet. Run
-`make dev-admin`.
+database up; compose waits for Postgres to pass its health check, but a machine
+short on memory can still have it killed. `make dev-logs` says which.

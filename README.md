@@ -53,48 +53,43 @@ not already know from `make build` and `make test`.
 
 ### In a container
 
-`.devcontainer/` holds a dev container with the Go toolchain and `make`. Open
-the repo in VS Code and choose **Reopen in Container**, or run it with the
+[`.devcontainer/`](.devcontainer/) is the whole environment, not just a
+toolchain: it composes the Go workspace together with a Mattermost 11 server
+and its database, so opening the repo gives you somewhere to deploy the plugin
+and watch it run.
+
+Open the repo in VS Code and choose **Reopen in Container**, or use the
 [devcontainer CLI](https://github.com/devcontainers/cli):
 
 ```sh
 devcontainer up --workspace-folder .
+devcontainer exec --workspace-folder . make dev-admin   # first system admin
+devcontainer exec --workspace-folder . make deploy      # build, upload, enable
 devcontainer exec --workspace-folder . make test
 ```
+
+Nothing needs configuring first — every setting has a working default.
+Mattermost is forwarded to port 8065. It wants about 2 GB of memory across the
+containers.
 
 The image tracks the `go` directive in `go.mod`, and `GOTOOLCHAIN` is left on
 `auto`, so the exact patch release go.mod asks for is what compiles the plugin
 whatever the image ships. The editor is configured to format with `gofmt` and
 nothing else, because `make check` fails on any file `gofmt` would rewrite.
 
-The dev container holds the toolchain only. The server to run the plugin
-*inside* is separate, below, because it wants a couple of gigabytes and is
-often somewhere else entirely.
+The server half can also run on its own, on a machine that never opens the dev
+container — see [`dev/README.md`](dev/README.md). `make deploy` talks HTTP and
+takes `MM_SERVER_URL`, so building here and deploying there is an ordinary
+thing to do.
 
-### A server to run it against
-
-There is a limit to what the test suite can tell you about a plugin that runs
-inside somebody else's server. [`dev/`](dev/README.md) brings up a real
-Mattermost 11 server with a real database:
-
-```sh
-cp dev/.env.example dev/.env   # at minimum POSTGRES_PASSWORD and MM_SITE_URL
-make dev-up                    # Mattermost and PostgreSQL
-make dev-admin                 # the first system admin, via the local socket
-make deploy                    # build, package, upload, enable
-```
-
-`make deploy` talks to the server over HTTP, so it does not have to be the
-machine you build on — point `MM_SERVER_URL` at wherever it is.
+It is a development server: plain HTTP, an admin socket in the container,
+signature checks off, a default database password. `dev/README.md` says what
+that means and where not to put it.
 
 The setting that matters most is `MM_SITE_URL`. The plugin builds its OAuth
-redirect from it, and Yandex refuses a callback that is not character-for-
-character what the application has registered, so getting it wrong produces a
-connect flow that works until its very last step.
-
-It is a development server: plain HTTP, an unauthenticated admin socket in the
-container, signature checks off. [`dev/README.md`](dev/README.md) says what
-that means and where not to put it.
+redirect from it, and Yandex refuses a callback that is not
+character-for-character what the application has registered, so getting it
+wrong produces a connect flow that works until its very last step.
 
 ## How it is put together
 
