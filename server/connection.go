@@ -83,9 +83,15 @@ func (p *Plugin) siteURL() string {
 	return ""
 }
 
-// recordSuccess notes that the provider answered. It clears the failure count,
-// because "two consecutive failures" means consecutive.
-func (p *Plugin) recordSuccess(connection *Connection, now time.Time) {
+// recordSuccess notes that the provider answered, which revives a Connection
+// that had been refused and clears the failure count, because "two consecutive
+// failures" means consecutive.
+//
+// It touches only the Connection. When the calendar was last read belongs to
+// the sync state, and is recorded by whoever holds it: the poll sets it on the
+// state it is already working with, and a read on demand calls
+// noteCalendarRead.
+func (p *Plugin) recordSuccess(connection *Connection) {
 	changed := false
 	if connection.AuthFailures != 0 {
 		connection.AuthFailures, changed = 0, true
@@ -93,18 +99,25 @@ func (p *Plugin) recordSuccess(connection *Connection, now time.Time) {
 	if !connection.Active {
 		connection.Active, connection.InactiveNoticeSent, changed = true, false, true
 	}
-	if changed {
-		if err := p.store.SaveConnection(connection); err != nil {
-			p.client.Log.Error("Could not save a Connection after a successful read", "error", err.Error())
-		}
+	if !changed {
+		return
 	}
+	if err := p.store.SaveConnection(connection); err != nil {
+		p.client.Log.Error("Could not save a Connection after a successful read", "error", err.Error())
+	}
+}
 
-	state, err := p.store.SyncState(connection.MattermostUserID)
+// noteCalendarRead records when a person's calendar was last read, so they can
+// tell an empty day from a Connection that has quietly stopped working. The
+// poll does not use this: it already holds the state it is about to save.
+func (p *Plugin) noteCalendarRead(userID string, now time.Time) {
+	state, err := p.store.SyncState(userID)
 	if err != nil {
+		p.client.Log.Warn("Could not read sync state", "user_id", userID, "error", err.Error())
 		return
 	}
 	state.LastSuccessAt = now
-	if err := p.store.SaveSyncState(connection.MattermostUserID, state); err != nil {
+	if err := p.store.SaveSyncState(userID, state); err != nil {
 		p.client.Log.Warn("Could not record when a calendar was last read", "error", err.Error())
 	}
 }

@@ -30,11 +30,11 @@ func (p Problem) Error() string {
 }
 
 // Expand turns Events into the Occurrences that fall inside [from, to). An
-// Occurrence is inside the window when it is happening during it, so a meeting
+// Occurrence is inside the window when it is happening during it, so an Event
 // that began before the window opened and is still running belongs in it.
 //
 // Events are expanded in their own timezone, which is what keeps a 10:00
-// meeting at 10:00 on both sides of a daylight-saving transition.
+// Event at 10:00 on both sides of a daylight-saving transition.
 func Expand(events []calendar.Event, from, to time.Time) ([]calendar.Occurrence, []Problem) {
 	var (
 		masters   []calendar.Event

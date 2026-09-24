@@ -30,7 +30,7 @@ const (
 	// extended. Keeping these apart is what lets a poll tick cost one request
 	// when nothing has changed.
 	cacheFloor = 24 * time.Hour
-	// inProgressLookback keeps meetings that started before now in view, so
+	// inProgressLookback keeps Events that started before now in view, so
 	// that a day's list includes the one that is running.
 	inProgressLookback = 24 * time.Hour
 )
@@ -95,7 +95,7 @@ func (p *Plugin) pollUser(ctx context.Context, userID string, now time.Time) err
 	if err := p.store.SaveSyncState(userID, state); err != nil {
 		return err
 	}
-	p.recordSuccess(connection, now)
+	p.recordSuccess(connection)
 	return nil
 }
 

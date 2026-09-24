@@ -18,6 +18,13 @@ import (
 // botUsername is the account both message types come from.
 const botUsername = "yandex-calendar"
 
+// The scheduled jobs, named so that anything reasoning about their stored
+// state — including tests — cannot drift from what is actually scheduled.
+const (
+	pollJobKey     = "yandex-calendar-poll"
+	deliveryJobKey = "yandex-calendar-deliver"
+)
+
 // tickInterval is how often the scheduled jobs wake up. It is not the poll
 // interval: a tick decides which people are due to be polled and which
 // messages have come due, both of which are cheap when the answer is none.
@@ -100,12 +107,16 @@ func (p *Plugin) startJobs() error {
 	p.jobsLock.Lock()
 	defer p.jobsLock.Unlock()
 
+	// A job that has never run starts immediately rather than waiting out its
+	// first interval, so activating the plugin polls straight away instead of
+	// leaving everyone a minute behind. Only one node does it: the job holds a
+	// cluster-wide lock while it runs.
 	scheduled := []struct {
 		key string
 		run func(time.Time)
 	}{
-		{"yandex-calendar-poll", p.RunPoll},
-		{"yandex-calendar-deliver", p.RunDelivery},
+		{pollJobKey, p.RunPoll},
+		{deliveryJobKey, p.RunDelivery},
 	}
 
 	for _, definition := range scheduled {
@@ -219,7 +230,7 @@ func (p *Plugin) dm(userID string, post *model.Post) error {
 
 // userLocation is the timezone a person reads times in. Falling back to UTC is
 // better than failing: a Reminder in the wrong timezone still names the right
-// meeting, and the fallback only applies to an account with no preference set.
+// Event, and the fallback only applies to an account with no preference set.
 func (p *Plugin) userLocation(userID string) *time.Location {
 	user, err := p.client.User.Get(userID)
 	if err != nil {

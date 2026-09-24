@@ -39,7 +39,7 @@ func TestTheSameEventReadsCorrectlyToPeopleInDifferentTimezones(t *testing.T) {
 	}
 }
 
-func TestAMeetingThatRunsPastMidnightNamesBothDays(t *testing.T) {
+func TestAnEventThatRunsPastMidnightNamesBothDays(t *testing.T) {
 	overnight := occurrence("Deployment window", moment(2026, 9, 24, 22, 0), moment(2026, 9, 25, 3, 0))
 
 	shown := timeRange(overnight, testZone)

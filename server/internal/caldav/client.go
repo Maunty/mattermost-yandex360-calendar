@@ -108,7 +108,7 @@ func (c *Client) FindCalendarHome(ctx context.Context) (string, error) {
 //
 // Collections are kept only when they are calendars and their component set
 // includes VEVENT. That is what excludes the task list, whose events would
-// otherwise be read as meetings, and the scheduling inbox and outbox.
+// otherwise be read as Events, and the scheduling inbox and outbox.
 func (c *Client) ListCalendars(ctx context.Context, homeHref string) ([]Collection, error) {
 	responses, err := c.propfind(ctx, homeHref, 1, propfindCollections)
 	if err != nil {

@@ -336,7 +336,33 @@ func newHarness(t *testing.T) *harness {
 		EncryptionKey:       "an-encryption-key-for-tests",
 	})
 
-	return &harness{t: t, plugin: p, api: api, caldav: calendarServer, yandex: yandex}
+	h := &harness{t: t, plugin: p, api: api, caldav: calendarServer, yandex: yandex}
+	h.holdBackScheduledJobs()
+	t.Cleanup(func() { _ = p.OnDeactivate() })
+	return h
+}
+
+// holdBackScheduledJobs stops the background jobs from firing during a test.
+//
+// A job that has never run starts the moment it is scheduled, which is right
+// in production and useless here: it would run against the real wall clock
+// while the test drives the plugin at the times it chose, and whatever it did
+// would land in the middle of the assertions. Recording that both jobs
+// finished a moment ago puts their next run a full interval away, past the end
+// of any test, using the scheduler's own mechanism rather than a flag in the
+// plugin. Tests drive RunPoll and RunDelivery directly instead.
+func (h *harness) holdBackScheduledJobs() {
+	h.t.Helper()
+	metadata, err := json.Marshal(map[string]any{"LastFinished": time.Now()})
+	if err != nil {
+		h.t.Fatalf("marshalling job metadata: %v", err)
+	}
+
+	h.api.mu.Lock()
+	defer h.api.mu.Unlock()
+	for _, key := range []string{pollJobKey, deliveryJobKey} {
+		h.api.kv["cron_"+key] = kvEntry{value: metadata}
+	}
 }
 
 // connect puts the person through the real consent flow, callback and all.

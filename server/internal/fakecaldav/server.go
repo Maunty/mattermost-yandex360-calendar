@@ -80,7 +80,7 @@ func (s *Server) AddCalendar(name, displayName string) *Collection {
 }
 
 // AddTaskList adds the collection of to-dos every account has. Reading it for
-// meetings is a mistake the plugin must not make.
+// Events is a mistake the plugin must not make.
 func (s *Server) AddTaskList(name, displayName string) *Collection {
 	return s.add(name, displayName, "calendar", []string{"VTODO"})
 }

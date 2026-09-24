@@ -216,7 +216,7 @@ func TestRemindersComeFromEveryCalendar(t *testing.T) {
 	}
 }
 
-func TestARecurringMeetingIsRemindedEveryWeek(t *testing.T) {
+func TestARecurringEventIsRemindedEveryWeek(t *testing.T) {
 	h := connectedHarness(t, moment(2026, 9, 24, 8, 0))
 	calendar := h.calendar("events-1000001")
 	calendar.Put("weekly", recurringEvent("weekly", "Weekly sync",
@@ -302,7 +302,7 @@ func TestRemindersCanBeTurnedOff(t *testing.T) {
 	}
 }
 
-func TestManyPeopleWhoseMeetingsStartOnTheHourDoNotAllPollAtOnce(t *testing.T) {
+func TestManyPeopleWhoseEventsStartOnTheHourDoNotAllPollAtOnce(t *testing.T) {
 	// Delivery is per minute and exact, so the spreading that matters is of
 	// the reads behind it.
 	now := moment(2026, 9, 24, 9, 0)

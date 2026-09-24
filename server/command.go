@@ -185,7 +185,8 @@ func (p *Plugin) commandToday(ctx context.Context, args *model.CommandArgs, now 
 			"user_id", args.UserId, "error", err.Error())
 		return ephemeral(p.readFailureMessage(err))
 	}
-	p.recordSuccess(connection, now)
+	p.recordSuccess(connection)
+	p.noteCalendarRead(args.UserId, now)
 
 	post := todayPost(now, occurrences, loc)
 	post.ChannelId = args.ChannelId

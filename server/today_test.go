@@ -210,7 +210,7 @@ func TestAnAllDayEventAppearsInTheDaysList(t *testing.T) {
 	}
 }
 
-func TestAMeetingAlreadyRunningIsStillInTheDaysList(t *testing.T) {
+func TestAnEventAlreadyRunningIsStillInTheDaysList(t *testing.T) {
 	now := moment(2026, 9, 24, 11, 0)
 	h := connectedHarness(t, now)
 	calendar := h.calendar("events-1000001")
@@ -255,7 +255,7 @@ func TestADangerousConferenceLinkIsNotRendered(t *testing.T) {
 
 // Recurring Events, ticket 05, end to end.
 
-func TestAStandingMeetingAppearsOnItsDay(t *testing.T) {
+func TestAStandingEventAppearsOnItsDay(t *testing.T) {
 	// The series started weeks ago; today is one of its Thursdays.
 	now := moment(2026, 9, 24, 8, 0)
 	h := connectedHarness(t, now)
@@ -270,7 +270,7 @@ func TestAStandingMeetingAppearsOnItsDay(t *testing.T) {
 	}
 }
 
-func TestAStandingMeetingDoesNotAppearOnADayItDoesNotFallOn(t *testing.T) {
+func TestAStandingEventDoesNotAppearOnADayItDoesNotFallOn(t *testing.T) {
 	now := moment(2026, 9, 25, 8, 0) // a Friday
 	h := connectedHarness(t, now)
 	calendar := h.calendar("events-1000001")
