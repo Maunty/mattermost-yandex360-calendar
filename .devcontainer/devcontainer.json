@@ -1,0 +1,59 @@
+{
+	"name": "Yandex Calendar for Mattermost",
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
+
+	// Left explicit because it is load-bearing rather than incidental: go.mod
+	// pins a specific patch release, and this is what goes and gets it.
+	"containerEnv": {
+		"GOTOOLCHAIN": "auto"
+	},
+
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"golang.go"
+			],
+			"settings": {
+				// `make check` fails if `gofmt -l .` prints anything, so the
+				// editor has to format with gofmt and nothing else. Letting it
+				// default to goimports or gofumpt would mean saving a file
+				// could break the build.
+				"go.formatTool": "gofmt",
+				"go.vetOnSave": "package",
+				"go.lintOnSave": "off",
+
+				// The suite asserts on behaviour through a fake calendar
+				// server, so a cached pass is not evidence of anything. This
+				// is the flag the Makefile uses.
+				"go.testFlags": [
+					"-count=1"
+				],
+				"go.testTimeout": "120s",
+
+				// One CPU and under a gigabyte of headroom on the machine this
+				// was written for. Background tool downloads and a language
+				// server indexing on every keystroke are felt there.
+				"go.toolsManagement.autoUpdate": false,
+
+				"[go]": {
+					"editor.formatOnSave": true,
+					"editor.codeActionsOnSave": {
+						"source.organizeImports": "explicit"
+					}
+				},
+				"gopls": {
+					"ui.semanticTokens": true
+				}
+			}
+		}
+	},
+
+	// Warms the module cache so the first `make test` is not also the first
+	// download. Deliberately not `go build ./...`: on one core that is a slow
+	// way to learn nothing the test run will not tell you.
+	"postCreateCommand": "go mod download",
+
+	"remoteUser": "vscode"
+}

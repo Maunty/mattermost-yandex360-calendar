@@ -51,6 +51,27 @@ make release # every platform, then the installable bundle in dist/
 five platforms the manifest declares takes minutes and answers nothing you do
 not already know from `make build` and `make test`.
 
+### In a container
+
+`.devcontainer/` holds a dev container with the Go toolchain and `make`. Open
+the repo in VS Code and choose **Reopen in Container**, or run it with the
+[devcontainer CLI](https://github.com/devcontainers/cli):
+
+```sh
+devcontainer up --workspace-folder .
+devcontainer exec --workspace-folder . make test
+```
+
+The image tracks the `go` directive in `go.mod`, and `GOTOOLCHAIN` is left on
+`auto`, so the exact patch release go.mod asks for is what compiles the plugin
+whatever the image ships. The editor is configured to format with `gofmt` and
+nothing else, because `make check` fails on any file `gofmt` would rewrite.
+
+**It does not include a Mattermost server.** The plugin runs inside one, so a
+server plus its database is what tickets 02 and 03 are waiting on — but it
+needs a couple of gigabytes to itself, which is more than the machine this was
+written on has. Running one is a separate, larger piece of setup.
+
 ## How it is put together
 
 Seven pieces, each with a small interface:
