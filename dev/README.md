@@ -56,6 +56,37 @@ machine:
 MM_SERVER_URL=http://dev-box.lan:8065 make deploy
 ```
 
+## Does the server have to be public?
+
+No. Yandex never connects to it.
+
+Connecting a calendar ends with Yandex sending an HTTP redirect to *the
+browser* the person is consenting in, pointing at
+`<MM_SITE_URL>/plugins/yandex-calendar/oauth/complete`. The browser follows it.
+So the only thing that has to reach the server is the browser you are sitting
+in front of.
+
+What the server does need is **outbound** access, to `oauth.yandex.ru` to
+exchange the code for tokens and to `caldav.yandex.ru` to read calendars.
+Nothing inbound from the internet, ever.
+
+For a server on another machine, the tidiest arrangement is a tunnel:
+
+```sh
+ssh -L 8065:localhost:8065 your-dev-box
+```
+
+Leave `MM_SITE_URL=http://localhost:8065`, register that same address at
+Yandex, and browse to it through the tunnel. Nothing is exposed, and
+`localhost` is the redirect URI that OAuth providers are most willing to accept
+over plain HTTP.
+
+Reaching it directly on a trusted network works too —
+`MM_SITE_URL=http://dev-box.lan:8065`. The risk there is not networking but
+registration: Yandex may refuse to *save* a plain `http://` redirect URI for a
+host that is not localhost. That is a rule on their form, and if you hit it the
+answer is the tunnel above or a TLS terminator in front.
+
 ## Pointing it at Yandex
 
 [docs/admin-setup.md](../docs/admin-setup.md) is the real guide and is written

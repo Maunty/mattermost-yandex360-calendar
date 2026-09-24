@@ -21,8 +21,13 @@
 	],
 	"shutdownAction": "stopCompose",
 
-	// Mattermost, for your browser. This is the address that has to match
-	// MM_SITE_URL and the redirect URI registered at Yandex.
+	// Mattermost, forwarded to your browser.
+	//
+	// Whatever address you end up reaching it at is what MM_SITE_URL has to
+	// be, and what you register at Yandex as the redirect URI — because
+	// connecting a calendar finishes by Yandex telling *your browser* to go
+	// there. Yandex itself never connects to it, so the server does not have
+	// to be reachable from the internet, only from the browser you consent in.
 	"forwardPorts": [
 		8065
 	],
