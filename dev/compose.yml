@@ -1,0 +1,100 @@
+# A Mattermost server to develop this plugin against.
+#
+# This is a development server. It runs over plain HTTP, it keeps its data in
+# local volumes, and it is configured to accept plugin uploads and to let
+# anything on the host administer it through a local socket. Do not put it
+# anywhere it can be reached by people you would not hand an admin account to.
+#
+#   cp dev/.env.example dev/.env   # then edit it
+#   make dev-up
+#
+name: yandex-calendar-dev
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mmuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in dev/.env}
+      POSTGRES_DB: ${POSTGRES_DB:-mattermost}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      # Mattermost fails its migrations rather than waiting, so it must not
+      # start until the database will actually answer.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mmuser} -d ${POSTGRES_DB:-mattermost}"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  mattermost:
+    # Pinned rather than floating: the plugin declares a minimum in the 11
+    # series, and this is the version that claim is tested against. `release-11`
+    # tracks the series if you would rather follow it.
+    image: mattermost/mattermost-team-edition:${MATTERMOST_VERSION:-11.11.1}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${MATTERMOST_PORT:-8065}:8065"
+    environment:
+      MM_SQLSETTINGS_DRIVERNAME: postgres
+      MM_SQLSETTINGS_DATASOURCE: >-
+        postgres://${POSTGRES_USER:-mmuser}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-mattermost}?sslmode=disable&connect_timeout=10
+
+      # The single most important setting here. The plugin builds its OAuth
+      # redirect from this, and Yandex refuses a callback that does not match
+      # what is registered on the application character for character. If
+      # connecting fails at the last step, this is why.
+      MM_SERVICESETTINGS_SITEURL: ${MM_SITE_URL:-http://localhost:8065}
+      MM_SERVICESETTINGS_LISTENADDRESS: ":8065"
+
+      # Plugins: enabled, and uploadable, which is how the bundle gets in.
+      MM_PLUGINSETTINGS_ENABLE: "true"
+      MM_PLUGINSETTINGS_ENABLEUPLOADS: "true"
+      MM_PLUGINSETTINGS_REQUIREPLUGINSIGNATURE: "false"
+      # Skips unpacking the plugins shipped in the image, which this server has
+      # no use for and which slow every start.
+      MM_PLUGINSETTINGS_AUTOMATICPREPACKAGEDPLUGINS: "false"
+
+      # Local mode is an unauthenticated admin socket inside the container. It
+      # is what lets mmctl create the first account without a chicken-and-egg
+      # problem. It is also why this server must not be exposed.
+      MM_SERVICESETTINGS_ENABLELOCALMODE: "true"
+      MM_SERVICESETTINGS_LOCALMODESOCKETLOCATION: /var/tmp/mattermost_local.socket
+
+      # The plugin logs what it skipped and why — an unreadable event, a
+      # recurrence rule it could not expand, a provider that refused it. None
+      # of that reaches a user, so the log is where you read it.
+      MM_LOGSETTINGS_ENABLECONSOLE: "true"
+      MM_LOGSETTINGS_CONSOLELEVEL: ${MM_LOG_LEVEL:-DEBUG}
+      MM_LOGSETTINGS_ENABLEFILE: "true"
+      MM_LOGSETTINGS_FILELEVEL: ${MM_LOG_LEVEL:-DEBUG}
+
+      MM_SERVICESETTINGS_ENABLEDEVELOPER: "true"
+      MM_SERVICESETTINGS_ENABLETESTING: "true"
+      # Reminders and the daily summary are bot direct messages, so an account
+      # with no team still has somewhere to receive them; a team makes the
+      # server easier to poke at by hand.
+      MM_TEAMSETTINGS_ENABLEOPENSERVER: "true"
+      MM_EMAILSETTINGS_REQUIREEMAILVERIFICATION: "false"
+      MM_EMAILSETTINGS_SENDEMAILNOTIFICATIONS: "false"
+    volumes:
+      # Named volumes, so the image's own ownership of these directories is
+      # what the volume inherits. Bind mounts here need chowning to uid 2000
+      # first and are a common way to get a container that will not start.
+      - mattermost-config:/mattermost/config
+      - mattermost-data:/mattermost/data
+      - mattermost-logs:/mattermost/logs
+      - mattermost-plugins:/mattermost/plugins
+      - mattermost-client-plugins:/mattermost/client/plugins
+
+volumes:
+  postgres-data:
+  mattermost-config:
+  mattermost-data:
+  mattermost-logs:
+  mattermost-plugins:
+  mattermost-client-plugins:

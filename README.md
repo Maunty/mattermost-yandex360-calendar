@@ -67,10 +67,34 @@ The image tracks the `go` directive in `go.mod`, and `GOTOOLCHAIN` is left on
 whatever the image ships. The editor is configured to format with `gofmt` and
 nothing else, because `make check` fails on any file `gofmt` would rewrite.
 
-**It does not include a Mattermost server.** The plugin runs inside one, so a
-server plus its database is what tickets 02 and 03 are waiting on — but it
-needs a couple of gigabytes to itself, which is more than the machine this was
-written on has. Running one is a separate, larger piece of setup.
+The dev container holds the toolchain only. The server to run the plugin
+*inside* is separate, below, because it wants a couple of gigabytes and is
+often somewhere else entirely.
+
+### A server to run it against
+
+There is a limit to what the test suite can tell you about a plugin that runs
+inside somebody else's server. [`dev/`](dev/README.md) brings up a real
+Mattermost 11 server with a real database:
+
+```sh
+cp dev/.env.example dev/.env   # at minimum POSTGRES_PASSWORD and MM_SITE_URL
+make dev-up                    # Mattermost and PostgreSQL
+make dev-admin                 # the first system admin, via the local socket
+make deploy                    # build, package, upload, enable
+```
+
+`make deploy` talks to the server over HTTP, so it does not have to be the
+machine you build on — point `MM_SERVER_URL` at wherever it is.
+
+The setting that matters most is `MM_SITE_URL`. The plugin builds its OAuth
+redirect from it, and Yandex refuses a callback that is not character-for-
+character what the application has registered, so getting it wrong produces a
+connect flow that works until its very last step.
+
+It is a development server: plain HTTP, an unauthenticated admin socket in the
+container, signature checks off. [`dev/README.md`](dev/README.md) says what
+that means and where not to put it.
 
 ## How it is put together
 
