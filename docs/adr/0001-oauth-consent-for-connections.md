@@ -10,6 +10,8 @@ A Connection is established by sending the user through Yandex's OAuth consent f
 
 ## Consequences
 
+> The scope consequences below apply to CalDAV only. [ADR 0002](0002-rest-api-replaces-caldav.md) moved reading to a REST API that accepts a read-only scope.
+
 An early probe with `calendar:events.read` + `calendar:calendars.read` was rejected by CalDAV with 401; a broader calendar scope succeeded with the same token. The scopes that gate CalDAV are **not** the fine-grained read scopes, so the manifest must request the broad scope and the exact string must be pinned down before release. See [the probe findings](../research/caldav-probe-findings.md).
 
 **The scope is broader than the feature set.** Probing isolated `calendar:all` as the only scope that opens CalDAV: `calendar:events.read` + `calendar:calendars.read` and `calendar:read_all` both return 401 with an otherwise-valid token. A read-only plugin must therefore request write-capable consent, which users and Organization administrators will see on the consent screen. This is a known and accepted cost of choosing OAuth over App Passwords.

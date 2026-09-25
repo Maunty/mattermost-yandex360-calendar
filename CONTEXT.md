@@ -25,8 +25,12 @@ _Avoid_: account, link, integration, binding
 ### Calendars and events
 
 **Own Calendar**:
-The calendar belonging to a single person, read for them through their Connection.
+A calendar belonging to a single person, read for them through their Connection. A person may have several.
 _Avoid_: personal calendar, my calendar, private calendar
+
+**Subscribed Calendar**:
+Someone else's calendar, or an external feed, that a person follows without taking part in its Events. Not an Own Calendar; out of scope, like a Shared Calendar.
+_Avoid_: followed calendar, colleague's calendar
 
 **Shared Calendar**:
 A calendar readable by several people and surfaced to a group rather than an individual. Out of scope for v1.
@@ -35,6 +39,10 @@ _Avoid_: team calendar, room calendar, group calendar
 **Event**:
 A single scheduled occurrence in a calendar.
 _Avoid_: meeting, appointment, entry, booking
+
+**A person's Events**:
+The Events a person organises or is invited to (required or optional) that they have not declined. Only these produce Reminders and appear in a Daily Summary. An Event marked as free time still counts.
+_Avoid_: my meetings, relevant events
 
 ### What the plugin sends
 
