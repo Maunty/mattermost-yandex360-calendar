@@ -16,15 +16,16 @@ import (
 	"github.com/mattermost/mattermost/server/public/plugin/plugintest"
 	"github.com/mattermost/mattermost/server/public/pluginapi"
 
-	"github.com/Maunty/mattermost-ya-calendar/server/internal/fakecaldav"
+	"github.com/Maunty/mattermost-ya-calendar/server/internal/fakecalendarapi"
 )
 
 // The tests in this package run against two substitutions and nothing else:
-// a fake CalDAV server below the wire, and the plugin API mock above. Between
-// them everything is the real implementation — discovery, collection
-// filtering, change-tag comparison, query construction, iCalendar parsing,
-// recurrence expansion, scheduling and rendering — and every assertion is
-// about the messages that came out.
+// a fake of Yandex's REST calendar API below the wire, and the plugin API mock
+// above. Between them everything is the real implementation — the request,
+// paging, reading each item, deciding which Events are the person's,
+// scheduling and rendering — and every assertion is about the messages that
+// came out. Tests still describe calendars as iCalendar objects; the fake
+// turns them into what the API returns.
 //
 // The clock is a value. Job entry points take the moment to run at, so a test
 // says "at 09:50 on this day" rather than mocking time.
@@ -307,8 +308,9 @@ type harness struct {
 	t      *testing.T
 	plugin *Plugin
 	api    *testAPI
-	caldav *fakecaldav.Server
-	yandex *fakeYandex
+	// provider is Yandex's calendar, as the REST API serves it.
+	provider *fakecalendarapi.Server
+	yandex   *fakeYandex
 }
 
 func newHarness(t *testing.T) *harness {
@@ -316,15 +318,15 @@ func newHarness(t *testing.T) *harness {
 
 	api := newTestAPI()
 	yandex := newFakeYandex(t)
-	calendarServer := fakecaldav.New(t)
+	calendarServer := fakecalendarapi.New(t)
 
 	p := &Plugin{
-		authorizeURL: yandex.URL + "/authorize",
-		tokenURL:     yandex.URL + "/token",
-		userInfoURL:  yandex.URL + "/info",
-		caldavURL:    calendarServer.URL,
-		httpClient:   calendarServer.Client(),
-		botID:        testBotID,
+		authorizeURL:   yandex.URL + "/authorize",
+		tokenURL:       yandex.URL + "/token",
+		userInfoURL:    yandex.URL + "/info",
+		calendarAPIURL: calendarServer.URL,
+		httpClient:     calendarServer.Client(),
+		botID:          testBotID,
 	}
 	p.SetAPI(api)
 	p.client = pluginapi.NewClient(api, nil)
@@ -336,7 +338,7 @@ func newHarness(t *testing.T) *harness {
 		EncryptionKey:       "an-encryption-key-for-tests",
 	})
 
-	h := &harness{t: t, plugin: p, api: api, caldav: calendarServer, yandex: yandex}
+	h := &harness{t: t, plugin: p, api: api, provider: calendarServer, yandex: yandex}
 	h.holdBackScheduledJobs()
 	t.Cleanup(func() { _ = p.OnDeactivate() })
 	return h
@@ -385,9 +387,9 @@ func (h *harness) connect(now time.Time) {
 	h.clearPosts()
 }
 
-// calendar adds a collection of events shaped the way a real account's is.
-func (h *harness) calendar(name string) *fakecaldav.Collection {
-	return h.caldav.AddCalendar(name, name)
+// calendar adds a calendar the person owns.
+func (h *harness) calendar(name string) *fakecalendarapi.Calendar {
+	return h.provider.AddCalendar(name, name)
 }
 
 func (h *harness) command(command string, now time.Time) *model.CommandResponse {

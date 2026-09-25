@@ -120,3 +120,16 @@ func task(uid, summary string) string {
 	return "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VTODO\r\n" +
 		"UID:" + uid + "\r\nSUMMARY:" + summary + "\r\nEND:VTODO\r\nEND:VCALENDAR\r\n"
 }
+
+// unreadableItem is an Event the provider holds but describes in a way the
+// plugin cannot read: its timezone is one nobody has heard of.
+func unreadableItem() map[string]any {
+	return map[string]any{
+		"ical_uid":      "broken",
+		"event_id":      "00000000-0000-0000-0000-000000000000",
+		"start":         map[string]string{"date_time": "2026-09-24T09:00:00", "time_zone": "Mars/Olympus"},
+		"end":           map[string]string{"date_time": "2026-09-24T10:00:00", "time_zone": "Mars/Olympus"},
+		"summary":       "Nonsense",
+		"relation_type": "ORGANIZER",
+	}
+}

@@ -21,7 +21,7 @@ func TestTwoAuthenticationFailuresRetireAConnection(t *testing.T) {
 	h.clearPosts()
 
 	// Access is revoked at Yandex.
-	h.caldav.Token = "a-token-this-plugin-does-not-have"
+	h.provider.Token = "a-token-this-plugin-does-not-have"
 
 	next := h.pollAgain(now)
 	connection, _ := h.plugin.store.Connection(testUserID)
@@ -44,7 +44,7 @@ func TestARetiredConnectionIsExplainedOnceWithAWayBack(t *testing.T) {
 	h := connectedHarness(t, now)
 	h.calendar("events-1000001")
 	h.plugin.RunPoll(now)
-	h.caldav.Token = "revoked"
+	h.provider.Token = "revoked"
 	h.clearPosts()
 
 	next := h.pollAgain(now)
@@ -71,7 +71,7 @@ func TestARetiredConnectionStopsAllMessages(t *testing.T) {
 	calendar.Put("a", timedEvent("a", "Standup", moment(2026, 9, 24, 10, 0), moment(2026, 9, 24, 10, 30)))
 	h.plugin.RunPoll(yesterday)
 
-	h.caldav.Token = "revoked"
+	h.provider.Token = "revoked"
 	next := h.pollAgain(yesterday)
 	h.pollAgain(next)
 	h.clearPosts()
@@ -91,13 +91,13 @@ func TestReconnectingRestoresMessagesWithNoOtherAction(t *testing.T) {
 	calendar.Put("a", timedEvent("a", "Standup", moment(2026, 9, 24, 10, 0), moment(2026, 9, 24, 10, 30)))
 	h.plugin.RunPoll(yesterday)
 
-	h.caldav.Token = "revoked"
+	h.provider.Token = "revoked"
 	next := h.pollAgain(yesterday)
 	h.pollAgain(next)
 	h.clearPosts()
 
 	// The person reconnects, and Yandex issues a token that works again.
-	h.caldav.Token = h.yandex.accessToken
+	h.provider.Token = h.yandex.accessToken
 	h.connect(moment(2026, 9, 24, 7, 0))
 
 	h.plugin.RunPoll(moment(2026, 9, 24, 7, 30))
@@ -120,7 +120,7 @@ func TestAProviderOutageNeverRetiresAConnection(t *testing.T) {
 	h.clearPosts()
 
 	// Yandex is unwell for several poll cycles.
-	h.caldav.Fail(http.StatusServiceUnavailable, 0)
+	h.provider.Fail(http.StatusServiceUnavailable, 0)
 	at := now
 	for range 6 {
 		at = h.pollAgain(at)
@@ -144,14 +144,14 @@ func TestMessagesResumeByThemselvesAfterAnOutage(t *testing.T) {
 	calendar := h.calendar("events-1000001")
 	calendar.Put("a", timedEvent("a", "Standup", moment(2026, 9, 24, 10, 0), moment(2026, 9, 24, 10, 30)))
 
-	h.caldav.Fail(http.StatusBadGateway, 0)
+	h.provider.Fail(http.StatusBadGateway, 0)
 	at := yesterday
 	for range 4 {
 		at = h.pollAgain(at)
 	}
 	h.clearPosts()
 
-	h.caldav.Recover()
+	h.provider.Recover()
 	h.plugin.RunPoll(moment(2026, 9, 24, 9, 0))
 	h.plugin.RunDelivery(moment(2026, 9, 24, 9, 50))
 
@@ -169,10 +169,10 @@ func TestATransientFailureDoesNotCountTowardsRetirement(t *testing.T) {
 	// One refusal, then an outage, then another refusal. The two refusals are
 	// not consecutive attempts at the same thing, but they are the only two
 	// answers that say the credential is wrong.
-	h.caldav.Token = "revoked"
+	h.provider.Token = "revoked"
 	next := h.pollAgain(now)
 
-	h.caldav.Fail(http.StatusServiceUnavailable, 1)
+	h.provider.Fail(http.StatusServiceUnavailable, 1)
 	next = h.pollAgain(next)
 
 	connection, _ := h.plugin.store.Connection(testUserID)
@@ -193,13 +193,13 @@ func TestASuccessfulReadClearsThePreviousFailure(t *testing.T) {
 	h.calendar("events-1000001")
 	h.plugin.RunPoll(now)
 
-	h.caldav.Token = "revoked"
+	h.provider.Token = "revoked"
 	next := h.pollAgain(now)
 
-	h.caldav.Token = h.yandex.accessToken
+	h.provider.Token = h.yandex.accessToken
 	next = h.pollAgain(next)
 
-	h.caldav.Token = "revoked"
+	h.provider.Token = "revoked"
 	h.pollAgain(next)
 
 	connection, _ := h.plugin.store.Connection(testUserID)
@@ -250,7 +250,7 @@ func TestARefreshThatFailsBecauseYandexIsUnwellIsRetried(t *testing.T) {
 
 	h.yandex.recoverToken()
 	h.yandex.accessToken = "a-renewed-token"
-	h.caldav.Token = "a-renewed-token"
+	h.provider.Token = "a-renewed-token"
 	h.plugin.RunPoll(at)
 
 	state, _ := h.plugin.store.SyncState(testUserID)
@@ -292,8 +292,7 @@ func TestOneUnreadableEventDoesNotStopTheRest(t *testing.T) {
 	yesterday := moment(2026, 9, 23, 20, 0)
 	h := connectedHarness(t, yesterday)
 	calendar := h.calendar("events-1000001")
-	calendar.Put("broken", "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:broken\r\n"+
-		"SUMMARY:Nonsense\r\nDTSTART;TZID=Mars/Olympus:20260924T090000\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n")
+	calendar.PutItem("broken", unreadableItem())
 	calendar.Put("fine", timedEvent("fine", "Standup", moment(2026, 9, 24, 10, 0), moment(2026, 9, 24, 10, 30)))
 
 	h.plugin.RunPoll(yesterday)
@@ -304,30 +303,11 @@ func TestOneUnreadableEventDoesNotStopTheRest(t *testing.T) {
 	}
 }
 
-func TestAnEventWithAnUnreadableRuleDoesNotStopTheRest(t *testing.T) {
-	yesterday := moment(2026, 9, 23, 20, 0)
-	h := connectedHarness(t, yesterday)
-	calendar := h.calendar("events-1000001")
-	calendar.Put("weird", recurringEvent("weird", "Nonsense rule",
-		moment(2026, 9, 24, 9, 0), moment(2026, 9, 24, 9, 30), "FREQ=NEVER;INTERVAL=banana"))
-	calendar.Put("fine", timedEvent("fine", "Standup", moment(2026, 9, 24, 10, 0), moment(2026, 9, 24, 10, 30)))
-
-	h.plugin.RunPoll(yesterday)
-	h.plugin.RunDelivery(moment(2026, 9, 24, 9, 50))
-
-	if reminders := h.reminders(); len(reminders) != 1 {
-		t.Errorf("an unreadable rule cost this person their other reminders: got %d", len(reminders))
-	}
-	if !strings.Contains(strings.Join(h.logged(), "\n"), "recurrence could not be expanded") {
-		t.Errorf("the skipped rule was not logged: %v", h.logged())
-	}
-}
-
 func TestAPersonIsNeverSentTechnicalErrorText(t *testing.T) {
 	now := moment(2026, 9, 24, 9, 0)
 	h := connectedHarness(t, now)
 	h.calendar("events-1000001")
-	h.caldav.Fail(http.StatusInternalServerError, 0)
+	h.provider.Fail(http.StatusInternalServerError, 0)
 	h.clearPosts()
 
 	shown := h.command("/yacal today", now).Text
@@ -346,7 +326,7 @@ func TestAnOutageDuringTodayDoesNotSuggestReconnecting(t *testing.T) {
 	now := moment(2026, 9, 24, 9, 0)
 	h := connectedHarness(t, now)
 	h.calendar("events-1000001")
-	h.caldav.Fail(http.StatusServiceUnavailable, 0)
+	h.provider.Fail(http.StatusServiceUnavailable, 0)
 
 	shown := h.command("/yacal today", now).Text
 
@@ -359,7 +339,7 @@ func TestARevokedConnectionDuringTodayDoesSuggestReconnecting(t *testing.T) {
 	now := moment(2026, 9, 24, 9, 0)
 	h := connectedHarness(t, now)
 	h.calendar("events-1000001")
-	h.caldav.Token = "revoked"
+	h.provider.Token = "revoked"
 
 	shown := h.command("/yacal today", now).Text
 

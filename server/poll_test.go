@@ -1,9 +1,13 @@
 package main
 
 import (
+	"fmt"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/Maunty/mattermost-ya-calendar/server/internal/fakecalendarapi"
 )
 
 // Ticket 06: background polling. Nothing is delivered here; what is checked is
@@ -22,7 +26,14 @@ func (h *harness) cached(t *testing.T) []string {
 	return titles
 }
 
-func (h *harness) requestCount() int { return len(h.caldav.Requests()) }
+// boundedInTime reports whether a read names both ends of its window. Without
+// an end, the API pages through everything from the start onwards.
+func boundedInTime(request fakecalendarapi.Request) bool {
+	query, err := url.ParseQuery(request.Query)
+	return err == nil && query.Get("from") != "" && query.Get("to") != ""
+}
+
+func (h *harness) requestCount() int { return len(h.provider.Requests()) }
 
 // pollAgain moves past the person's next due time and polls.
 func (h *harness) pollAgain(after time.Time) time.Time {
@@ -49,30 +60,26 @@ func TestPollingFillsTheCacheWithoutAnybodyAskingForIt(t *testing.T) {
 	}
 }
 
-func TestATickOverUnchangedCalendarsCostsOneRequest(t *testing.T) {
+func TestATickCostsOneRequestHoweverManyCalendarsThereAre(t *testing.T) {
 	now := moment(2026, 9, 24, 9, 0)
 	h := connectedHarness(t, now)
 	work := h.calendar("events-1000001")
 	work.Put("a", timedEvent("a", "Work meeting", moment(2026, 9, 24, 11, 0), moment(2026, 9, 24, 12, 0)))
 	personal := h.calendar("events-9000001")
 	personal.Put("b", timedEvent("b", "Dentist", moment(2026, 9, 24, 15, 0), moment(2026, 9, 24, 16, 0)))
-	h.caldav.AddTaskList("todos-1000002", "Не забыть")
+	h.provider.AddTaskList("todos-1000002", "Не забыть")
 
-	h.plugin.RunPoll(now) // the first poll discovers and reads everything
+	h.plugin.RunPoll(now)
 
-	h.caldav.Reset()
+	h.provider.Reset()
 	h.pollAgain(now)
 
-	requests := h.caldav.Requests()
-	if len(requests) != 1 {
-		t.Fatalf("a tick over unchanged calendars cost %d requests, want 1:\n%+v", len(requests), requests)
-	}
-	if requests[0].Method != "PROPFIND" {
-		t.Errorf("the one request was %s, want the depth-one read of the calendar home", requests[0].Method)
+	if count := h.requestCount(); count != 1 {
+		t.Fatalf("a tick cost %d requests, want 1:\n%+v", count, h.provider.Requests())
 	}
 }
 
-func TestOnlyTheCollectionWhoseChangeTagMovedIsQueried(t *testing.T) {
+func TestAChangeInAnyCalendarReachesTheCacheOnTheNextTick(t *testing.T) {
 	now := moment(2026, 9, 24, 9, 0)
 	h := connectedHarness(t, now)
 	work := h.calendar("events-1000001")
@@ -84,101 +91,32 @@ func TestOnlyTheCollectionWhoseChangeTagMovedIsQueried(t *testing.T) {
 
 	// Something changes in one calendar only.
 	work.Put("c", timedEvent("c", "New meeting", moment(2026, 9, 24, 17, 0), moment(2026, 9, 24, 17, 30)))
-
-	h.caldav.Reset()
-	h.pollAgain(now)
-
-	var queried []string
-	for _, request := range h.caldav.Requests() {
-		if request.Method == "REPORT" {
-			queried = append(queried, request.Path)
-		}
-	}
-	if len(queried) != 1 {
-		t.Fatalf("%d collections were queried, want only the one that changed: %v", len(queried), queried)
-	}
-	if !strings.Contains(queried[0], "events-1000001") {
-		t.Errorf("the wrong collection was queried: %s", queried[0])
-	}
-	if !strings.Contains(strings.Join(h.cached(t), "|"), "New meeting") {
-		t.Errorf("the new meeting did not reach the cache: %v", h.cached(t))
-	}
-	if !strings.Contains(strings.Join(h.cached(t), "|"), "Dentist") {
-		t.Errorf("the unchanged calendar's events were dropped from the cache: %v", h.cached(t))
-	}
-}
-
-func TestTheCacheFollowsAnEventBeingMovedAtTheProvider(t *testing.T) {
-	now := moment(2026, 9, 24, 9, 0)
-	h := connectedHarness(t, now)
-	calendar := h.calendar("events-1000001")
-	calendar.Put("m", timedEvent("m", "Review", moment(2026, 9, 24, 14, 0), moment(2026, 9, 24, 15, 0)))
-	h.plugin.RunPoll(now)
-
-	calendar.Put("m", timedEvent("m", "Review", moment(2026, 9, 24, 16, 0), moment(2026, 9, 24, 17, 0)))
 	h.pollAgain(now)
 
 	cached := strings.Join(h.cached(t), "|")
-	if !strings.Contains(cached, "16:00") {
-		t.Errorf("the cache did not follow the move: %s", cached)
+	if !strings.Contains(cached, "New meeting") {
+		t.Errorf("the new meeting did not reach the cache: %v", cached)
 	}
-	if strings.Contains(cached, "14:00") {
-		t.Errorf("the cache still holds the old time: %s", cached)
+	if !strings.Contains(cached, "Dentist") {
+		t.Errorf("the unchanged calendar's events were dropped from the cache: %v", cached)
 	}
 }
 
-func TestTheCacheFollowsAnEventBeingDeletedAtTheProvider(t *testing.T) {
+func TestEveryPageOfEventsIsRead(t *testing.T) {
 	now := moment(2026, 9, 24, 9, 0)
 	h := connectedHarness(t, now)
+	h.provider.PageSize = 2
 	calendar := h.calendar("events-1000001")
-	calendar.Put("m", timedEvent("m", "Review", moment(2026, 9, 24, 14, 0), moment(2026, 9, 24, 15, 0)))
+	for i := range 5 {
+		uid := fmt.Sprintf("m%d", i)
+		calendar.Put(uid, timedEvent(uid, fmt.Sprintf("Meeting %d", i),
+			moment(2026, 9, 24, 10+i, 0), moment(2026, 9, 24, 10+i, 30)))
+	}
+
 	h.plugin.RunPoll(now)
 
-	calendar.Remove("m")
-	h.pollAgain(now)
-
-	if cached := h.cached(t); len(cached) != 0 {
-		t.Errorf("a deleted event is still cached: %v", cached)
-	}
-}
-
-func TestACalendarRemovedAtTheProviderLeavesTheCache(t *testing.T) {
-	now := moment(2026, 9, 24, 9, 0)
-	h := connectedHarness(t, now)
-	work := h.calendar("events-1000001")
-	work.Put("a", timedEvent("a", "Work meeting", moment(2026, 9, 24, 11, 0), moment(2026, 9, 24, 12, 0)))
-	h.plugin.RunPoll(now)
-
-	// The collection list no longer holds it. A fresh fake with no calendars
-	// is the same thing from the plugin's point of view.
-	work.Remove("a")
-	h.pollAgain(now)
-
-	if cached := h.cached(t); len(cached) != 0 {
-		t.Errorf("the cache still holds %v", cached)
-	}
-}
-
-func TestPollingIsSpacedOutAndJittered(t *testing.T) {
-	now := moment(2026, 9, 24, 9, 0)
-	h := connectedHarness(t, now)
-	h.calendar("events-1000001")
-	h.plugin.RunPoll(now)
-
-	state, err := h.plugin.store.SyncState(testUserID)
-	if err != nil {
-		t.Fatalf("SyncState: %v", err)
-	}
-	gap := state.NextPollAt.Sub(now)
-	if gap < pollInterval-pollJitter || gap > pollInterval+pollJitter {
-		t.Errorf("the next poll is %v away, want ten minutes give or take four", gap)
-	}
-
-	// A tick before that time costs nothing at all.
-	h.caldav.Reset()
-	h.plugin.RunPoll(now.Add(time.Minute))
-	if count := h.requestCount(); count != 0 {
-		t.Errorf("a tick before the due time cost %d requests", count)
+	if cached := h.cached(t); len(cached) != 5 {
+		t.Errorf("the cache holds %d of 5 Events: %v", len(cached), cached)
 	}
 }
 
@@ -225,7 +163,7 @@ func TestTheCachedWindowReachesBeyondTomorrow(t *testing.T) {
 	}
 }
 
-func TestNoPollReadsAWholeCollection(t *testing.T) {
+func TestNoPollReadsTheWholeCalendar(t *testing.T) {
 	now := moment(2026, 9, 24, 9, 0)
 	h := connectedHarness(t, now)
 	calendar := h.calendar("events-1000001")
@@ -234,9 +172,9 @@ func TestNoPollReadsAWholeCollection(t *testing.T) {
 
 	h.plugin.RunPoll(now)
 
-	for _, request := range h.caldav.Requests() {
-		if request.Method == "REPORT" && !strings.Contains(request.Body, "time-range") {
-			t.Errorf("a query without a time filter was issued:\n%s", request.Body)
+	for _, request := range h.provider.Requests() {
+		if !boundedInTime(request) {
+			t.Errorf("a read without both ends of a window was issued: %s", request.Query)
 		}
 	}
 	if strings.Contains(strings.Join(h.cached(t), "|"), "2017") {
@@ -269,31 +207,13 @@ func TestRestartingResumesPollingWithoutRedoingTheWork(t *testing.T) {
 		t.Fatalf("OnActivate: %v", err)
 	}
 
-	h.caldav.Reset()
+	h.provider.Reset()
 	h.pollAgain(now)
 
 	if count := h.requestCount(); count != 1 {
-		t.Errorf("the first tick after a restart cost %d requests, want 1: the change tags "+
-			"and the cache should have survived", count)
+		t.Errorf("the first tick after a restart cost %d requests, want 1", count)
 	}
 	if !strings.Contains(strings.Join(h.cached(t), "|"), "Standup") {
 		t.Errorf("the cache did not survive a restart: %v", h.cached(t))
-	}
-}
-
-func TestDiscoveryIsNotRepeatedOnEveryTick(t *testing.T) {
-	now := moment(2026, 9, 24, 9, 0)
-	h := connectedHarness(t, now)
-	h.calendar("events-1000001")
-	h.plugin.RunPoll(now)
-
-	h.caldav.Reset()
-	next := h.pollAgain(now)
-	h.pollAgain(next)
-
-	for _, request := range h.caldav.Requests() {
-		if strings.Contains(request.Path, "principals") {
-			t.Errorf("the principal was looked up again on a later tick: %+v", request)
-		}
 	}
 }

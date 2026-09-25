@@ -414,3 +414,21 @@ func TestDefaultsApplyToSomebodyWhoNeverTouchedTheirSettings(t *testing.T) {
 		t.Errorf("the default delivery time parsed to %02d:%02d", hour, minute)
 	}
 }
+
+func TestADeclinedEventIsLeftOutOfTheDailySummary(t *testing.T) {
+	now := moment(2026, 9, 24, 7, 0)
+	h := connectedHarness(t, now)
+	calendar := h.calendar("events-1000001")
+	calendar.PutDeclined("declined", timedEvent("declined", "Meeting I said no to",
+		moment(2026, 9, 24, 11, 0), moment(2026, 9, 24, 12, 0)))
+	calendar.Put("kept", timedEvent("kept", "Planning", moment(2026, 9, 24, 14, 0), moment(2026, 9, 24, 15, 0)))
+
+	shown := h.todayText(now)
+
+	if strings.Contains(shown, "Meeting I said no to") {
+		t.Errorf("a declined Event was listed:\n%s", shown)
+	}
+	if !strings.Contains(shown, "Planning") {
+		t.Errorf("the rest of the day was not listed:\n%s", shown)
+	}
+}

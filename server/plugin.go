@@ -11,8 +11,6 @@ import (
 	"github.com/mattermost/mattermost/server/public/plugin"
 	"github.com/mattermost/mattermost/server/public/pluginapi"
 	"github.com/mattermost/mattermost/server/public/pluginapi/cluster"
-
-	"github.com/Maunty/mattermost-ya-calendar/server/internal/caldav"
 )
 
 // botUsername is the account both message types come from.
@@ -48,10 +46,16 @@ type Plugin struct {
 	// Provider endpoints. Fields rather than constants so that a test can
 	// point the entire flow — consent, token, identity and calendar — at a
 	// stand-in without any of the code under test knowing.
-	authorizeURL string
-	tokenURL     string
-	userInfoURL  string
-	caldavURL    string
+	authorizeURL   string
+	tokenURL       string
+	userInfoURL    string
+	calendarAPIURL string
+	caldavURL      string
+
+	// readEvents is where Events come from. It is the REST API unless it is
+	// set otherwise; CalDAV is kept behind the same seam as a fallback, and
+	// switching to it is this one assignment (ADR 0002).
+	readEvents eventSource
 
 	jobsLock sync.Mutex
 	jobs     []*cluster.Job
@@ -95,6 +99,9 @@ func (p *Plugin) applyEndpointDefaults() {
 	}
 	if p.userInfoURL == "" {
 		p.userInfoURL = defaultUserInfoURL
+	}
+	if p.calendarAPIURL == "" {
+		p.calendarAPIURL = defaultCalendarAPI
 	}
 	if p.caldavURL == "" {
 		p.caldavURL = defaultCalDAVURL
@@ -165,18 +172,18 @@ func (p *Plugin) oauth() *oauthClient {
 	}
 }
 
-// calendarClient builds a read-only CalDAV client for one person, renewing
-// their access token first if it is close to expiry. The renewal happens
-// inside the authorizer so that a token which dies between two requests of the
-// same poll is replaced without the caller knowing.
-func (p *Plugin) calendarClient(connection *Connection, now time.Time) (*caldav.Client, error) {
-	return caldav.New(p.caldavURL, p.httpClient, func(ctx context.Context) (string, error) {
+// authorizer supplies one person's Authorization header, renewing their
+// access token first if it is close to expiry. The renewal happens per request
+// so that a token which dies between two requests of the same poll is replaced
+// without the caller knowing.
+func (p *Plugin) authorizer(connection *Connection, now time.Time) func(context.Context) (string, error) {
+	return func(ctx context.Context) (string, error) {
 		token, err := p.accessToken(ctx, connection, now)
 		if err != nil {
 			return "", err
 		}
 		return "OAuth " + token, nil
-	})
+	}
 }
 
 // accessToken returns a usable access token, refreshing it if it has expired

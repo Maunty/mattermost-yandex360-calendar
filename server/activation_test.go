@@ -183,12 +183,12 @@ func TestAnUnconfiguredPluginDoesNoBackgroundWork(t *testing.T) {
 	h := connectedHarness(t, now)
 	h.calendar("events-1000001")
 	h.plugin.setConfiguration(&configuration{})
-	h.caldav.Reset()
+	h.provider.Reset()
 
 	h.plugin.RunPoll(now)
 	h.plugin.RunDelivery(now)
 
-	if requests := h.caldav.Requests(); len(requests) != 0 {
+	if requests := h.provider.Requests(); len(requests) != 0 {
 		t.Errorf("an unconfigured plugin made %d requests", len(requests))
 	}
 }

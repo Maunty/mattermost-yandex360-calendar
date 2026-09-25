@@ -19,7 +19,7 @@ func TestAReminderArrivesTheLeadTimeBeforeTheEvent(t *testing.T) {
 	h := connectedHarness(t, start.Add(-time.Hour))
 	calendar := h.calendar("events-1000001")
 	calendar.Put("standup", timedEvent("standup", "Standup", start, start.Add(30*time.Minute),
-		"LOCATION:Room 3", "X-TELEMOST-CONFERENCE:https://telemost.yandex.ru/j/42"))
+		"LOCATION:Room 3"))
 
 	h.tick(start.Add(-time.Hour))
 	if messages := h.reminders(); len(messages) != 0 {
@@ -33,7 +33,7 @@ func TestAReminderArrivesTheLeadTimeBeforeTheEvent(t *testing.T) {
 		t.Fatalf("got %d reminders ten minutes before the event, want one:\n%s", len(messages), allText(messages))
 	}
 	shown := text(messages[0])
-	for _, want := range []string{"Standup", "10:00", "10:30", "MSK", "Room 3", "https://telemost.yandex.ru/j/42"} {
+	for _, want := range []string{"Standup", "10:00", "10:30", "MSK", "Room 3"} {
 		if !strings.Contains(shown, want) {
 			t.Errorf("the reminder does not mention %q:\n%s", want, shown)
 		}
@@ -319,5 +319,56 @@ func TestManyPeopleWhoseEventsStartOnTheHourDoNotAllPollAtOnce(t *testing.T) {
 	}
 	if len(counts) < 3 {
 		t.Errorf("forty people fell into only %d distinct minutes", len(counts))
+	}
+}
+
+// Which Events are the person's. CONTEXT.md: the Events they organise or are
+// invited to, required or optional, that they have not declined.
+
+func TestADeclinedEventProducesNoReminder(t *testing.T) {
+	start := moment(2026, 9, 24, 10, 0)
+	h := connectedHarness(t, start.Add(-time.Hour))
+	calendar := h.calendar("events-1000001")
+	calendar.PutDeclined("declined", timedEvent("declined", "Meeting I said no to", start, start.Add(time.Hour)))
+
+	h.tick(start.Add(-time.Hour))
+	h.plugin.RunDelivery(start.Add(-10 * time.Minute))
+
+	if messages := h.reminders(); len(messages) != 0 {
+		t.Errorf("a declined Event was reminded:\n%s", allText(messages))
+	}
+}
+
+func TestAnEventOnASubscribedCalendarProducesNoReminder(t *testing.T) {
+	start := moment(2026, 9, 24, 10, 0)
+	h := connectedHarness(t, start.Add(-time.Hour))
+	colleague := h.provider.AddSubscribedCalendar("colleague", "A colleague's calendar")
+	colleague.Put("theirs", timedEvent("theirs", "Their one-to-one", start, start.Add(time.Hour)))
+	mine := h.calendar("events-1000001")
+	mine.Put("mine", timedEvent("mine", "My standup", start, start.Add(30*time.Minute)))
+
+	h.tick(start.Add(-time.Hour))
+	h.plugin.RunDelivery(start.Add(-10 * time.Minute))
+
+	shown := allText(h.reminders())
+	if strings.Contains(shown, "Their one-to-one") {
+		t.Errorf("an Event on a Subscribed Calendar was reminded:\n%s", shown)
+	}
+	if !strings.Contains(shown, "My standup") {
+		t.Errorf("the person's own Event was not reminded:\n%s", shown)
+	}
+}
+
+func TestAnEventMarkedAsFreeTimeIsStillReminded(t *testing.T) {
+	start := moment(2026, 9, 24, 10, 0)
+	h := connectedHarness(t, start.Add(-time.Hour))
+	calendar := h.calendar("events-1000001")
+	calendar.Put("fyi", timedEvent("fyi", "Release goes out", start, start.Add(time.Hour), "TRANSP:TRANSPARENT"))
+
+	h.tick(start.Add(-time.Hour))
+	h.plugin.RunDelivery(start.Add(-10 * time.Minute))
+
+	if messages := h.reminders(); len(messages) != 1 {
+		t.Errorf("got %d reminders for an Event marked as free time, want one", len(messages))
 	}
 }

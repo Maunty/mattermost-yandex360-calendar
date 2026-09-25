@@ -44,9 +44,9 @@ type Connection struct {
 
 	ConnectedAt time.Time
 
-	// CalendarHome is where this account's collections were found. It is
-	// remembered so that a poll tick costs one request rather than three, and
-	// it is always a value the server returned, never one built from a login.
+	// CalendarHome is where this account's CalDAV collections were found. It
+	// is used only by the CalDAV fallback (ADR 0002), and it is always a value
+	// the server returned, never one built from a login.
 	CalendarHome string
 
 	// Active is false once the provider has refused the credential twice. An
@@ -102,10 +102,6 @@ func parseClockTime(value string) (int, int, error) {
 // SyncState is what the last poll learned. It holds no secrets, so unlike the
 // Connection it is stored in the clear.
 type SyncState struct {
-	// CTags is each collection's change tag as of the last read, keyed by the
-	// href the server returned. A collection whose tag has not moved is not
-	// queried again.
-	CTags map[string]string
 	// Occurrences is the person's cached forward window, already expanded.
 	// Reminders fire from this, at exact times, rather than from the poll.
 	Occurrences []calendar.Occurrence
@@ -235,9 +231,6 @@ func (s *Store) SyncState(userID string) (*SyncState, error) {
 	state := &SyncState{}
 	if err := s.kv.Get(syncKeyPrefix+userID, state); err != nil {
 		return nil, err
-	}
-	if state.CTags == nil {
-		state.CTags = map[string]string{}
 	}
 	return state, nil
 }

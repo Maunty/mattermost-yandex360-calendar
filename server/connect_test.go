@@ -326,7 +326,7 @@ func TestAnExpiredAccessTokenIsRenewedWithoutTheUser(t *testing.T) {
 	// An hour later the access token has expired.
 	later := connectedAt.Add(2 * time.Hour)
 	h.yandex.accessToken = "a-renewed-access-token"
-	h.caldav.Token = "a-renewed-access-token"
+	h.provider.Token = "a-renewed-access-token"
 
 	response := h.command("/yacal today", later)
 

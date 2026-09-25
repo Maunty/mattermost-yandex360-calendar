@@ -68,7 +68,7 @@ func TestTodayReadsEveryCalendarButNotTheTaskList(t *testing.T) {
 	work.Put("w", timedEvent("w", "Work meeting", moment(2026, 9, 24, 9, 0), moment(2026, 9, 24, 10, 0)))
 	personal := h.calendar("events-9000001")
 	personal.Put("p", timedEvent("p", "Dentist", moment(2026, 9, 24, 11, 0), moment(2026, 9, 24, 12, 0)))
-	todos := h.caldav.AddTaskList("todos-1000002", "Не забыть")
+	todos := h.provider.AddTaskList("todos-1000002", "Не забыть")
 	todos.Put("t", task("t", "Buy milk"))
 
 	shown := h.todayText(now)
@@ -132,8 +132,7 @@ func TestAnUnreadableEventIsSkippedAndTheRestStillArrive(t *testing.T) {
 	now := moment(2026, 9, 24, 8, 0)
 	h := connectedHarness(t, now)
 	calendar := h.calendar("events-1000001")
-	calendar.Put("broken", "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:broken\r\n"+
-		"SUMMARY:Nonsense\r\nDTSTART;TZID=Mars/Olympus:20260924T090000\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n")
+	calendar.PutItem("broken", unreadableItem())
 	calendar.Put("fine", timedEvent("fine", "Perfectly fine meeting",
 		moment(2026, 9, 24, 11, 0), moment(2026, 9, 24, 12, 0)))
 
@@ -224,6 +223,7 @@ func TestAnEventAlreadyRunningIsStillInTheDaysList(t *testing.T) {
 }
 
 func TestTheConferenceLinkIsOfferedWhenThereIsOne(t *testing.T) {
+	t.Skip("the REST API carries no conference link; see .scratch/rest-transport/issues/04-conference-link.md")
 	now := moment(2026, 9, 24, 8, 0)
 	h := connectedHarness(t, now)
 	calendar := h.calendar("events-1000001")
@@ -239,6 +239,7 @@ func TestTheConferenceLinkIsOfferedWhenThereIsOne(t *testing.T) {
 }
 
 func TestADangerousConferenceLinkIsNotRendered(t *testing.T) {
+	t.Skip("the REST API carries no conference link; see .scratch/rest-transport/issues/04-conference-link.md")
 	now := moment(2026, 9, 24, 8, 0)
 	h := connectedHarness(t, now)
 	calendar := h.calendar("events-1000001")
@@ -350,23 +351,23 @@ func TestRecurringAndSingleEventsAreListedTogetherInOrder(t *testing.T) {
 }
 
 func TestQueriesAreAlwaysBoundedInTime(t *testing.T) {
-	// A full read with no time filter returns the whole collection, which on a
-	// real account is years of history.
+	// A read with no end to its window pages through everything from its
+	// start onwards.
 	now := moment(2026, 9, 24, 8, 0)
 	h := connectedHarness(t, now)
 	calendar := h.calendar("events-1000001")
 	calendar.Put("ancient", timedEvent("ancient", "A meeting from 2017",
 		moment(2017, 3, 1, 10, 0), moment(2017, 3, 1, 11, 0)))
 
-	h.caldav.Reset()
+	h.provider.Reset()
 	shown := h.todayText(now)
 
 	if strings.Contains(shown, "2017") {
 		t.Errorf("years of history came back:\n%s", shown)
 	}
-	for _, request := range h.caldav.Requests() {
-		if request.Method == "REPORT" && !strings.Contains(request.Body, "time-range") {
-			t.Errorf("an unbounded read was issued:\n%s", request.Body)
+	for _, request := range h.provider.Requests() {
+		if !boundedInTime(request) {
+			t.Errorf("an unbounded read was issued: %s", request.Query)
 		}
 	}
 }

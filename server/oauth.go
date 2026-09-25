@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Maunty/mattermost-ya-calendar/server/internal/caldav"
+	"github.com/Maunty/mattermost-ya-calendar/server/internal/calendarapi"
 )
 
 // Where Yandex lives. These are fields on the client rather than constants in
@@ -21,6 +22,7 @@ const (
 	defaultTokenURL     = "https://oauth.yandex.ru/token"
 	defaultUserInfoURL  = "https://login.yandex.ru/info?format=json"
 	defaultCalDAVURL    = "https://caldav.yandex.ru/"
+	defaultCalendarAPI  = "https://cloud-api.yandex.net"
 )
 
 // yandexScope is the consent this plugin asks for.
@@ -200,7 +202,7 @@ func (c *oauthClient) Account(ctx context.Context, accessToken string) (*yandexA
 // isAuthFailure reports a failure that means the Connection is dead, from
 // wherever in the stack it came.
 func isAuthFailure(err error) bool {
-	if caldav.IsAuthFailure(err) {
+	if caldav.IsAuthFailure(err) || calendarapi.IsAuthFailure(err) {
 		return true
 	}
 	var failure *oauthError
@@ -213,7 +215,7 @@ func isAuthFailure(err error) bool {
 // isTransient reports a failure worth trying again. Conflating this with the
 // one above would disconnect every user during a provider outage.
 func isTransient(err error) bool {
-	if caldav.IsTransient(err) {
+	if caldav.IsTransient(err) || calendarapi.IsTransient(err) {
 		return true
 	}
 	var failure *oauthError
