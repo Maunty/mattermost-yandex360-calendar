@@ -6,7 +6,7 @@ This plugin connects a person's Yandex Calendar to Mattermost and sends them
 two kinds of direct message:
 
 - **A reminder**, ten minutes before each event starts, naming it, when it
-  runs, where it is, and linking to the conference if there is one.
+  runs, and where it is.
 - **A daily summary**, once each morning, listing that day's events.
 
 Connecting is one command. You run `/yacal connect`, approve access on Yandex's
@@ -93,43 +93,73 @@ wrong produces a connect flow that works until its very last step.
 
 ## How it is put together
 
-Seven pieces, each with a small interface:
+Events come from Yandex's REST calendar API, which is in early access. It
+returns each occurrence of a recurring Event as its own item, with moved and
+cancelled occurrences already applied, so nothing on this side works out a
+recurrence rule. Why the plugin moved off CalDAV is in
+[ADR 0002](docs/adr/0002-rest-api-replaces-caldav.md).
 
 | Package | What it is responsible for |
 |---|---|
-| `server/internal/caldav` | Speaking the protocol. Read-only by construction: it has no method that writes, and refuses any HTTP method that is not a read. |
-| `server/internal/calendar` | The domain: an Event as stored, an Occurrence as experienced, and reading iCalendar into them. |
-| `server/internal/recurrence` | Turning Events into Occurrences. A pure function: no network, no storage, no dependency on the rest of the plugin. |
-| `server/sync.go` | Deciding what to fetch, skipping collections whose change tag has not moved, and keeping each person's cached window. |
+| `server/internal/calendarapi` | Reading a window of a person's Events from the REST API, every page of it, and keeping only the Events they organise or are invited to. Read-only by construction: it has no method that writes. |
+| `server/internal/calendar` | The domain: an Event as stored, an Occurrence as experienced. |
+| `server/sync.go` | The event source, which is the one place the transport is chosen, and each person's cached window of occurrences, re-read in full on every poll. |
 | `server/deliver.go` | Deciding which reminders and summaries are due. |
 | `server/render.go` | Turning occurrences into messages, in the reader's own timezone. |
 | `server/store.go` | Connections, settings and everything else that is remembered. |
 
-Recurrence is expanded here rather than at the provider because
+### The CalDAV fallback
+
+The CalDAV path is still in the tree, compiled and tested, but not wired in.
+It is kept in case early access goes badly.
+
+| Package | What it is responsible for |
+|---|---|
+| `server/caldav_source.go` | The CalDAV event source: discovery, querying each collection, and expanding what comes back. |
+| `server/internal/caldav` | Speaking the protocol. Read-only by construction: it refuses any HTTP method that is not a read. |
+| `server/internal/calendar` | Also reads iCalendar into Events, which only this path needs. |
+| `server/internal/recurrence` | Turning Events into Occurrences. A pure function: no network, no storage, no dependency on the rest of the plugin. |
+
+Over CalDAV, recurrence has to be expanded on the plugin's side because
 [Yandex accepts a request to expand it and silently ignores it](docs/research/caldav-probe-findings.md).
-That is the largest single piece of work in the project, and it is why
-`server/internal/recurrence` has the densest tests.
+That is why `server/internal/recurrence` has the densest tests.
+
+### Switching back to CalDAV
+
+1. Set the plugin's `readEvents` to `readFromCalDAV` when the plugin
+   activates. That one assignment is the whole switch.
+2. Put the consent scope back to the write-capable one, because CalDAV refuses
+   every narrower scope. See
+   [ADR 0001](docs/adr/0001-oauth-consent-for-connections.md) and the setup
+   guide.
+3. Release.
+
+Every existing Connection then has to be consented again under the broader
+scope. Reminders already sent are not sent again, because both paths identify
+an occurrence the same way.
 
 ## How it is tested
 
 There are exactly two substitution points, and the clock is a parameter rather
 than an interface.
 
-- **Below the wire**: a [fake CalDAV server](server/internal/fakecaldav) serving
-  the response shapes a real account returned during probing, quirks included —
-  the principal comes back with different letter casing than the login, the
-  events collection carries a numeric suffix rather than the documented name,
-  and the calendar home answers 404 for properties it does not hold.
+- **Below the wire**: a [fake of the REST calendar API](server/internal/fakecalendarapi).
+  Tests still describe calendars as iCalendar objects in named calendars. The
+  fake answers the way the API does: one item per occurrence, declined Events
+  left out, Events on a Subscribed Calendar marked as such, and the whole list
+  paged.
 - **Above the plugin**: the standard Mattermost plugin test mock. Assertions
   are made on the posts that were created.
 
-Everything in between is the real implementation: discovery, collection
-filtering, change-tag comparison, query construction, iCalendar parsing,
-recurrence expansion, scheduling and rendering. A test says *given this
-calendar and this wall-clock time, these messages are sent, with this content*.
-No test reaches into intermediate state or names an internal function, so a
-refactor that preserves behaviour breaks nothing.
+Everything in between is the real implementation: the request, paging, reading
+each item, deciding which Events are the person's, scheduling and rendering. A
+test says *given this calendar and this wall-clock time, these messages are
+sent, with this content*. No test reaches into intermediate state or names an
+internal function, so a refactor that preserves behaviour breaks nothing.
 
+The CalDAV fallback is tested the same way. A few end-to-end tests switch the
+event source to CalDAV and run against a [fake CalDAV server](server/internal/fakecaldav)
+that serves the shapes a real account returned during probing, quirks included.
 Recurrence expansion is tested directly, with no substitution of any kind.
 
 ```sh
@@ -148,9 +178,11 @@ Mattermost, and localisation. The reasoning for each is in
 - [CONTEXT.md](CONTEXT.md) — what the words mean here, and which ones to avoid.
 - [docs/adr/0001](docs/adr/0001-oauth-consent-for-connections.md) — why OAuth
   consent rather than app passwords.
+- [docs/adr/0002](docs/adr/0002-rest-api-replaces-caldav.md) — why Events are
+  read over the REST API, and why CalDAV is kept.
 - [docs/research/caldav-probe-findings.md](docs/research/caldav-probe-findings.md)
-  — four probes against a live account. Two of them overturned conclusions
+  — four probes of CalDAV against a live account. Two of them overturned conclusions
   reached from documentation alone; several decisions in this codebase only
   make sense once you have read it.
-- [docs/research/rest-api-spike.md](docs/research/rest-api-spike.md) — why
-  there is no REST API to use instead.
+- [docs/research/rest-api-spike.md](docs/research/rest-api-spike.md) — the
+  search for a REST API before early access, since superseded by ADR 0002.
