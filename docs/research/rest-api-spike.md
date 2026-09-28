@@ -112,7 +112,7 @@ None of the design changes. Specifically:
 - **Recurrence is expanded client-side**, as ticket 05 assumed. This is the
   largest piece of work in the project and it stays.
 - The scope stays `calendar:all`, with the consequences documented in
-  [the administrator guide](../admin-setup.md#why-a-read-only-plugin-asks-for-write-access).
+  [the administrator guide](../admin-setup.md#why-earlier-versions-of-this-guide-asked-for-write-access).
 
 ## Sources
 

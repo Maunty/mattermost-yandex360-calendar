@@ -9,15 +9,16 @@ calendar, and the permission it asks each user for says the same thing: read
 their calendar's events, and nothing else.
 
 **Yandex's calendar API is in early access.** Before anyone can connect, Yandex
-has to approve the application you register in step 1. Until it does, users
-can approve consent, but every read of their calendar is refused.
+has to approve the application you register in step 1. Nothing works until it
+is approved.
 
 ## What you need
 
 - A Mattermost server in the 11 series or later.
 - Permission to register an application at [oauth.yandex.ru](https://oauth.yandex.ru/).
-- Your users' accounts in a Yandex 360 for Business organization. Personal
-  Yandex accounts are not supported for now.
+- Your users' accounts in a Yandex 360 for Business organization. Standalone
+  Accounts (Yandex accounts that belong to no organization) are not supported
+  for now.
 - Yandex's approval of your application for early access to the calendar API.
   Your Yandex 360 contact can tell you how to request it.
 
@@ -87,9 +88,8 @@ closes. `/yacal help` lists everything else.
 
 Two things say so, and they don't depend on each other:
 
-- **The permission.** `calendar:events.read` lets the application read events
-  and nothing more. Yandex enforces it: this plugin couldn't change a calendar
-  even if its code tried.
+- **The permission.** `calendar:events.read` grants the application the right
+  to read events, and no right to create, change or delete them.
 - **The code.** The calendar client has no method that creates, changes or
   deletes anything. Its whole surface is one call: read the events in a time
   window. A test drives a full read, across several pages, and fails if the
@@ -159,15 +159,23 @@ character, including the scheme and the Site URL.
 **A user consented but gets nothing, and `/yacal today` says it could not read
 their calendar.** Check two things. The scope on the Yandex application must be
 `calendar:events.read`, and `calendar:all` doesn't work. And Yandex must have
-approved the application for the calendar API. Either problem lets consent
-succeed and then refuses every read.
+approved the application for the calendar API. Either problem makes every read
+fail.
 
 **A user is told their access was withdrawn but says they did not withdraw
 it.** The plugin marks a connection inactive only after two consecutive
 refusals of the credential itself; being unable to reach Yandex never does it.
-Check whether the user revoked access at
-<https://id.yandex.ru/security/app-passwords>, and check the server log for
-what the provider actually answered.
+A refusal looks the same whatever its cause, so check three things:
+
+- The scope on the Yandex application is `calendar:events.read`. With any
+  other scope, Yandex refuses every read, and reconnecting won't help.
+- Yandex has approved the application for the calendar API. Until it does,
+  every read is refused, and reconnecting won't help.
+- The user hasn't revoked access at
+  <https://id.yandex.ru/security/app-passwords>. If they have, reconnecting
+  fixes it.
+
+The server log shows what Yandex actually answered.
 
 **Nothing arrives, and nothing is in the log.** `/yacal settings` shows each
 person when their calendar was last read successfully. "Not yet" with a live

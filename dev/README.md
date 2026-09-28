@@ -93,9 +93,10 @@ answer is the tunnel above or a TLS terminator in front.
 for administrators. The short version:
 
 1. Register an application at <https://oauth.yandex.ru/client/new>, as a web
-   service, with the scope **`calendar:all`** — and read
-   [why that scope](../docs/admin-setup.md#why-a-read-only-plugin-asks-for-write-access),
-   because it is the surprising part.
+   service, with the scope **`calendar:events.read`** and nothing else. Then
+   get it approved by Yandex for the calendar API, which is in early access:
+   until it is, every read is refused. See
+   [the guide](../docs/admin-setup.md#1-register-the-yandex-application).
 2. Register the redirect URI **exactly**:
    `<MM_SITE_URL>/plugins/yandex-calendar/oauth/complete`
 3. Put the client ID and secret into the System Console, under
