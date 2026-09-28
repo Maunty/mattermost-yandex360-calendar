@@ -333,7 +333,8 @@ func (s *Server) items(from, to time.Time, showDeclined bool) []map[string]any {
 			if o.AllDay {
 				item["recurrence_id"] = o.RecurrenceID.Format("2006-01-02")
 			} else {
-				item["recurrence_id"] = o.RecurrenceID.In(o.Start.Location()).Format("2006-01-02T15:04:05")
+				// UTC with no offset written, as the real API sends it.
+				item["recurrence_id"] = o.RecurrenceID.UTC().Format("2006-01-02T15:04:05")
 			}
 		}
 		items = append(items, item)

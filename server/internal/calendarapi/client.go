@@ -220,7 +220,7 @@ func (e event) occurrence() (calendar.Occurrence, error) {
 
 	recurrenceID := start
 	if e.RecurrenceID != "" {
-		recurrenceID, err = parseRecurrenceID(e.RecurrenceID, start.Location())
+		recurrenceID, err = parseRecurrenceID(e.RecurrenceID)
 		if err != nil {
 			return calendar.Occurrence{}, fmt.Errorf("unreadable recurrence id: %w", err)
 		}
@@ -237,11 +237,12 @@ func (e event) occurrence() (calendar.Occurrence, error) {
 	}, nil
 }
 
-// parseRecurrenceID reads the original start of an occurrence, which comes as
-// local time with no timezone of its own.
-func parseRecurrenceID(value string, loc *time.Location) (time.Time, error) {
+// parseRecurrenceID reads the original start of an occurrence. It has no
+// offset written on it, but it is UTC: probing showed it stays the same
+// whatever timezone the response is asked for, while start moves with it.
+func parseRecurrenceID(value string) (time.Time, error) {
 	if len(value) == len(dateLayout) {
-		return time.ParseInLocation(dateLayout, value, loc)
+		return time.ParseInLocation(dateLayout, value, time.UTC)
 	}
-	return time.ParseInLocation(dateTimeLayout, value, loc)
+	return time.ParseInLocation(dateTimeLayout, value, time.UTC)
 }

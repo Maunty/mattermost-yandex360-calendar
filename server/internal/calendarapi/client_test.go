@@ -73,3 +73,32 @@ func TestARefusedTokenIsAnAuthFailureAndAnOutageIsNot(t *testing.T) {
 		}
 	}
 }
+
+func TestAnOccurrenceIsIdentifiedByItsOriginalStartWhateverItsTimezone(t *testing.T) {
+	// A daily 09:30 in Moscow, one of whose occurrences was moved to 15:00.
+	// The key must be the instant each occurrence was first scheduled for,
+	// which is also the key the CalDAV path builds, so that switching
+	// transports never reminds anybody twice.
+	server := fakecalendarapi.New(t)
+	server.AddCalendar("events", "events").Put("daily", "BEGIN:VCALENDAR\r\nVERSION:2.0\r\n"+
+		"BEGIN:VEVENT\r\nUID:daily\r\nSUMMARY:Daily\r\nRRULE:FREQ=DAILY\r\n"+
+		"DTSTART;TZID=Europe/Moscow:20260920T093000\r\nDTEND;TZID=Europe/Moscow:20260920T100000\r\nEND:VEVENT\r\n"+
+		"BEGIN:VEVENT\r\nUID:daily\r\nSUMMARY:Daily\r\nRECURRENCE-ID;TZID=Europe/Moscow:20260924T093000\r\n"+
+		"DTSTART;TZID=Europe/Moscow:20260924T150000\r\nDTEND;TZID=Europe/Moscow:20260924T153000\r\nEND:VEVENT\r\n"+
+		"END:VCALENDAR\r\n")
+
+	occurrences, _, err := clientFor(t, server).Occurrences(context.Background(), from, to)
+	if err != nil {
+		t.Fatalf("Occurrences: %v", err)
+	}
+	if len(occurrences) != 1 {
+		t.Fatalf("got %d occurrences on the 24th, want the moved one", len(occurrences))
+	}
+	originally := time.Date(2026, 9, 24, 6, 30, 0, 0, time.UTC) // 09:30 in Moscow
+	if got := occurrences[0].RecurrenceID; !got.Equal(originally) {
+		t.Errorf("the moved occurrence is identified by %v, want its original start %v", got, originally)
+	}
+	if got := occurrences[0].Start.UTC(); !got.Equal(time.Date(2026, 9, 24, 12, 0, 0, 0, time.UTC)) {
+		t.Errorf("the moved occurrence starts at %v, want 12:00 UTC", got)
+	}
+}
