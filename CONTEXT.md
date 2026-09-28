@@ -33,7 +33,7 @@ Someone else's calendar, or an external feed, that a person follows without taki
 _Avoid_: followed calendar, colleague's calendar
 
 **Shared Calendar**:
-A calendar readable by several people and surfaced to a group rather than an individual. Out of scope for v1.
+A calendar readable by several people and surfaced to a group rather than an individual. Surfacing one to a group is out of scope for v1. A person's own Events on it, such as the Events they created there themselves, are still among **A person's Events**; everybody else's are not.
 _Avoid_: team calendar, room calendar, group calendar
 
 **Event**:
