@@ -14,10 +14,9 @@ own consent screen, and the window closes. You never type a password or a token
 into Mattermost, and you can disconnect at any time.
 
 **The plugin only reads.** It never creates, changes or deletes anything in
-anyone's calendar. It does have to ask Yandex for a permission that includes
-write access, because Yandex refuses every narrower one — see
-[why](docs/admin-setup.md#why-a-read-only-plugin-asks-for-write-access), with
-the evidence.
+anyone's calendar, and the only permission it asks for is to read calendar
+events (`calendar:events.read`). See
+[why it can be trusted to only read](docs/admin-setup.md#why-the-plugin-can-be-trusted-to-only-read).
 
 ## Commands
 
@@ -34,9 +33,10 @@ the evidence.
 
 ## Installing it
 
-Administrators: [docs/admin-setup.md](docs/admin-setup.md). It takes about five
-minutes — register an application at `oauth.yandex.ru`, paste two values into
-the System Console.
+Administrators: [docs/admin-setup.md](docs/admin-setup.md). Register an
+application at `oauth.yandex.ru` and paste two values into the System Console,
+which takes about five minutes. Then wait for Yandex to approve the application
+for its calendar API, which is in early access.
 
 ## Building it
 
@@ -128,8 +128,9 @@ That is why `server/internal/recurrence` has the densest tests.
 
 1. Set the plugin's `readEvents` to `readFromCalDAV` when the plugin
    activates. That one assignment is the whole switch.
-2. Put the consent scope back to the write-capable one, because CalDAV refuses
-   every narrower scope. See
+2. Put the consent scope back to the write-capable `calendar:all`, because
+   CalDAV refuses every narrower scope, and the REST API's
+   `calendar:events.read` doesn't open it. See
    [ADR 0001](docs/adr/0001-oauth-consent-for-connections.md) and the setup
    guide.
 3. Release.

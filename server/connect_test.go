@@ -30,29 +30,31 @@ func TestConnectOffersALinkToYandexConsent(t *testing.T) {
 	}
 }
 
-func TestTheScopeRequestedIsCalendarAll(t *testing.T) {
-	// Probing isolated this as the only scope that opens CalDAV: the
-	// fine-grained read scopes and the broad read-only scope are both refused
-	// with an otherwise-valid token. Narrowing it is not a text change.
+func TestTheScopeRequestedIsReadOnly(t *testing.T) {
+	// Probing showed the REST API reads everything the plugin needs with
+	// calendar:events.read alone, identity included, and refuses calendar:all
+	// outright. So the consent asks to read Events and nothing more.
 	h := newHarness(t)
 
 	response := h.command("/yacal connect", moment(2026, 9, 24, 9, 0))
 
-	if got := queryValue(t, linkFrom(t, response.Text), "scope"); got != "calendar:all" {
-		t.Errorf("scope: got %q, want calendar:all", got)
+	if got := queryValue(t, linkFrom(t, response.Text), "scope"); got != "calendar:events.read" {
+		t.Errorf("scope: got %q, want calendar:events.read", got)
 	}
 }
 
-func TestConnectExplainsWhyItAsksForWriteAccess(t *testing.T) {
-	// An administrator or a careful person reading the consent screen sees a
-	// write grant for a plugin that only reads. Saying nothing about that is
-	// how this plugin gets refused.
+func TestConnectSaysTheAccessIsReadOnly(t *testing.T) {
+	// The consent screen now asks only to read, and the message beside the
+	// link must not tell people otherwise.
 	h := newHarness(t)
 
 	response := h.command("/yacal connect", moment(2026, 9, 24, 9, 0))
 
-	if !strings.Contains(response.Text, "never writes") {
-		t.Errorf("the connect message does not address the write permission:\n%s", response.Text)
+	if !strings.Contains(response.Text, "read-only") {
+		t.Errorf("the connect message does not say the access is read-only:\n%s", response.Text)
+	}
+	if strings.Contains(response.Text, "change your calendar") {
+		t.Errorf("the connect message still warns about a write permission:\n%s", response.Text)
 	}
 }
 

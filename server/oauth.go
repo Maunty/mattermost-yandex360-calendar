@@ -25,15 +25,14 @@ const (
 	defaultCalendarAPI  = "https://cloud-api.yandex.net"
 )
 
-// yandexScope is the consent this plugin asks for.
+// yandexScope is the consent this plugin asks for: to read Events, and nothing
+// else. Probing showed the REST API serves everything the plugin reads with
+// this scope alone, and that the identity lookup needs no scope of its own.
 //
-// It is write-capable, and the plugin never writes. Probing isolated it as the
-// only scope that opens CalDAV at all: the fine-grained read scopes
-// (calendar:events.read, calendar:calendars.read) and the broad read-only
-// scope (calendar:read_all) are each rejected with 401 using a token that is
-// otherwise valid. Narrowing this is not a matter of changing the string; it
-// would need Yandex to accept a narrower scope over CalDAV.
-const yandexScope = "calendar:all"
+// It does not open CalDAV, which accepts only the write-capable calendar:all,
+// and the REST API refuses calendar:all. Falling back to CalDAV (ADR 0002)
+// therefore means changing this back and having everybody consent again.
+const yandexScope = "calendar:events.read"
 
 // oauthStateTTL is how long a consent flow may take. Long enough to sign in
 // and read a consent screen; short enough that an abandoned flow leaves

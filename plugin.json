@@ -17,7 +17,7 @@
         }
     },
     "settings_schema": {
-        "header": "Sends each connected user a reminder before their Yandex Calendar events and a summary of their day each morning.\n\nThe plugin is read-only. It never writes to anyone's calendar. It nevertheless has to ask each user for the write-capable `calendar:all` scope, because Yandex's CalDAV service rejects every narrower calendar scope. See the [administrator setup guide](https://github.com/Maunty/mattermost-ya-calendar/blob/main/docs/admin-setup.md) for the evidence behind that, and for how to register the Yandex application.",
+        "header": "Sends each connected user a reminder before their Yandex Calendar events and a summary of their day each morning.\n\nThe plugin is read-only. It asks each user only for permission to read their calendar's events (`calendar:events.read`), and never writes to anyone's calendar. Yandex's calendar API is in early access, so Yandex must approve your application before anyone can connect. See the [administrator setup guide](https://github.com/Maunty/mattermost-ya-calendar/blob/main/docs/admin-setup.md) for how to register the Yandex application.",
         "footer": "Once the client ID and secret are set, users connect with `/yacal connect`.",
         "settings": [
             {

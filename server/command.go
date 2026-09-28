@@ -140,8 +140,8 @@ func (p *Plugin) commandConnect(args *model.CommandArgs) *model.CommandResponse 
 
 	return ephemeral(fmt.Sprintf(
 		"[Connect your Yandex Calendar](%s)\n\n"+
-			"Yandex will ask you to approve access. It asks for permission to change your calendar as well as read it, "+
-			"because Yandex does not offer a read-only permission that works here — but this plugin never writes anything. "+
+			"Yandex will ask you to approve read-only access to your calendar's events. "+
+			"This plugin never changes anything in your calendar. "+
 			"If the window does not open, copy the link above into your browser.", link))
 }
 
