@@ -19,7 +19,7 @@ func TestAReminderArrivesTheLeadTimeBeforeTheEvent(t *testing.T) {
 	h := connectedHarness(t, start.Add(-time.Hour))
 	calendar := h.calendar("events-1000001")
 	calendar.Put("standup", timedEvent("standup", "Standup", start, start.Add(30*time.Minute),
-		"LOCATION:Room 3"))
+		"LOCATION:Room 3", "X-TELEMOST-CONFERENCE:https://telemost.yandex.ru/j/42"))
 
 	h.tick(start.Add(-time.Hour))
 	if messages := h.reminders(); len(messages) != 0 {
@@ -33,7 +33,7 @@ func TestAReminderArrivesTheLeadTimeBeforeTheEvent(t *testing.T) {
 		t.Fatalf("got %d reminders ten minutes before the event, want one:\n%s", len(messages), allText(messages))
 	}
 	shown := text(messages[0])
-	for _, want := range []string{"Standup", "10:00", "10:30", "MSK", "Room 3"} {
+	for _, want := range []string{"Standup", "10:00", "10:30", "MSK", "Room 3", "https://telemost.yandex.ru/j/42"} {
 		if !strings.Contains(shown, want) {
 			t.Errorf("the reminder does not mention %q:\n%s", want, shown)
 		}

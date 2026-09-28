@@ -6,7 +6,7 @@ This plugin connects a person's Yandex Calendar to Mattermost and sends them
 two kinds of direct message:
 
 - **A reminder**, ten minutes before each event starts, naming it, when it
-  runs, and where it is.
+  runs, where it is, and linking to the Telemost call if there is one.
 - **A daily summary**, once each morning, listing that day's events.
 
 Connecting is one command. You run `/yacal connect`, approve access on Yandex's

@@ -102,3 +102,34 @@ func TestAnOccurrenceIsIdentifiedByItsOriginalStartWhateverItsTimezone(t *testin
 		t.Errorf("the moved occurrence starts at %v, want 12:00 UTC", got)
 	}
 }
+
+func TestTheCallLinkIsTakenOnlyFromAfterALabel(t *testing.T) {
+	for description, want := range map[string]string{
+		"Ссылка на видеовстречу: https://telemost.yandex.ru/j/1\n\nAgenda":     "https://telemost.yandex.ru/j/1",
+		"Link to video conference: https://telemost.360.yandex.ru/j/2":         "https://telemost.360.yandex.ru/j/2",
+		"Ссылка на звонок: https://telemost.yandex.ru/j/3":                     "https://telemost.yandex.ru/j/3",
+		"Call link: https://telemost.yandex.ru/j/4\nNotes":                     "https://telemost.yandex.ru/j/4",
+		"Notes first\nCall link: https://telemost.yandex.ru/j/5":               "https://telemost.yandex.ru/j/5",
+		"See https://telemost.yandex.ru/j/6 and https://tracker.yandex.ru/X-1": "",
+		"": "",
+	} {
+		server := fakecalendarapi.New(t)
+		server.AddCalendar("events", "events").PutItem("call", map[string]any{
+			"ical_uid":      "call",
+			"event_id":      "00000000-0000-0000-0000-000000000002",
+			"start":         map[string]string{"date_time": "2026-09-24T10:00:00", "time_zone": "Europe/Moscow"},
+			"end":           map[string]string{"date_time": "2026-09-24T11:00:00", "time_zone": "Europe/Moscow"},
+			"summary":       "Call",
+			"description":   description,
+			"relation_type": "ATTENDEE",
+		})
+
+		occurrences, _, err := clientFor(t, server).Occurrences(context.Background(), from, to)
+		if err != nil || len(occurrences) != 1 {
+			t.Fatalf("Occurrences: %v, %d occurrences", err, len(occurrences))
+		}
+		if got := occurrences[0].Conference; got != want {
+			t.Errorf("description %q gave call link %q, want %q", description, got, want)
+		}
+	}
+}

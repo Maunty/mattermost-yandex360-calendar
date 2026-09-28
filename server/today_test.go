@@ -223,7 +223,6 @@ func TestAnEventAlreadyRunningIsStillInTheDaysList(t *testing.T) {
 }
 
 func TestTheConferenceLinkIsOfferedWhenThereIsOne(t *testing.T) {
-	t.Skip("the REST API carries no conference link; see .scratch/rest-transport/issues/04-conference-link.md")
 	now := moment(2026, 9, 24, 8, 0)
 	h := connectedHarness(t, now)
 	calendar := h.calendar("events-1000001")
@@ -239,7 +238,6 @@ func TestTheConferenceLinkIsOfferedWhenThereIsOne(t *testing.T) {
 }
 
 func TestADangerousConferenceLinkIsNotRendered(t *testing.T) {
-	t.Skip("the REST API carries no conference link; see .scratch/rest-transport/issues/04-conference-link.md")
 	now := moment(2026, 9, 24, 8, 0)
 	h := connectedHarness(t, now)
 	calendar := h.calendar("events-1000001")

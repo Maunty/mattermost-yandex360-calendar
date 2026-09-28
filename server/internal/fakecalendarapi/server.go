@@ -16,8 +16,10 @@ import (
 	"hash/fnv"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -276,9 +278,10 @@ func (s *Server) items(from, to time.Time, showDeclined bool) []map[string]any {
 	s.mu.Unlock()
 
 	type found struct {
-		occurrence calendar.Occurrence
-		relation   string
-		recurring  bool
+		occurrence  calendar.Occurrence
+		relation    string
+		recurring   bool
+		description string
 	}
 	var (
 		all []found
@@ -310,7 +313,7 @@ func (s *Server) items(from, to time.Time, showDeclined bool) []map[string]any {
 			}
 			occurrences, _ := recurrence.Expand(events, from, to)
 			for _, o := range occurrences {
-				all = append(all, found{o, relation, recurring})
+				all = append(all, found{o, relation, recurring, descriptionOf(data, o)})
 			}
 		}
 		c.mu.Unlock()
@@ -341,6 +344,9 @@ func (s *Server) items(from, to time.Time, showDeclined bool) []map[string]any {
 		if o.Location != "" {
 			item["location"] = o.Location
 		}
+		if f.description != "" {
+			item["description"] = f.description
+		}
 		if f.recurring {
 			if o.AllDay {
 				item["recurrence_id"] = o.RecurrenceID.Format("2006-01-02")
@@ -352,6 +358,21 @@ func (s *Server) items(from, to time.Time, showDeclined bool) []map[string]any {
 		items = append(items, item)
 	}
 	return items
+}
+
+var descriptionLine = regexp.MustCompile(`(?m)^DESCRIPTION:(.*)\r?$`)
+
+// descriptionOf builds the description the API returns: the call link first,
+// after the label Yandex writes, then whatever the organiser wrote.
+func descriptionOf(icalData string, o calendar.Occurrence) string {
+	var parts []string
+	if o.Conference != "" {
+		parts = append(parts, "Ссылка на видеовстречу: "+o.Conference)
+	}
+	if match := descriptionLine.FindStringSubmatch(icalData); match != nil {
+		parts = append(parts, strings.TrimSpace(match[1]))
+	}
+	return strings.Join(parts, "\n\n")
 }
 
 func eventTime(t time.Time, allDay bool) map[string]string {

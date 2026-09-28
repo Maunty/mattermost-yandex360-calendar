@@ -17,6 +17,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"time"
 
@@ -173,7 +174,25 @@ type event struct {
 	End          eventTime `json:"end"`
 	Summary      string    `json:"summary"`
 	Location     string    `json:"location"`
+	Description  string    `json:"description"`
 	RelationType string    `json:"relation_type"`
+}
+
+// conferenceLabel finds the call link Yandex writes into an Event's
+// description. There is no conference field; probing found the link only
+// here, at the start of a line and after one of these labels. Only a labelled
+// link counts, so an ordinary link in someone's notes is never offered as the
+// call.
+var conferenceLabel = regexp.MustCompile(
+	`(?m)^[ \t]*(?:Ссылка на видеовстречу|Ссылка на звонок|Link to video conference|Call link):[ \t]*(\S+)`)
+
+// conferenceOf returns the labelled call link in a description, or nothing.
+// The rest of the description is never kept: it may hold private notes.
+func conferenceOf(description string) string {
+	if match := conferenceLabel.FindStringSubmatch(description); match != nil {
+		return match[1]
+	}
+	return ""
 }
 
 // eventTime is either a local date and time with its timezone, or a bare date
@@ -233,6 +252,7 @@ func (e event) occurrence() (calendar.Occurrence, error) {
 		UID:          e.ICalUID,
 		Title:        e.Summary,
 		Location:     e.Location,
+		Conference:   conferenceOf(e.Description),
 		Start:        start,
 		End:          end,
 		AllDay:       allDay,
