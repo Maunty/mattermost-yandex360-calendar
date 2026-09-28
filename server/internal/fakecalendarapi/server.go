@@ -68,6 +68,7 @@ type Calendar struct {
 	mu       sync.Mutex
 	objects  map[string]string
 	declined map[string]bool
+	watched  map[string]bool
 	raw      map[string]map[string]any
 }
 
@@ -91,15 +92,10 @@ func (s *Server) AddTaskList(name, displayName string) *Calendar {
 	return s.add(&Calendar{relation: "ORGANIZER", tasks: true})
 }
 
-// AddSubscribedCalendar adds somebody else's calendar that the person follows
-// without taking part in its Events.
-func (s *Server) AddSubscribedCalendar(name, displayName string) *Calendar {
-	return s.add(&Calendar{relation: "SUBSCRIBER"})
-}
-
 func (s *Server) add(c *Calendar) *Calendar {
 	c.objects = map[string]string{}
 	c.declined = map[string]bool{}
+	c.watched = map[string]bool{}
 	c.raw = map[string]map[string]any{}
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -113,6 +109,17 @@ func (c *Calendar) Put(name, icalData string) {
 	defer c.mu.Unlock()
 	c.objects[name] = icalData
 	delete(c.declined, name)
+	delete(c.watched, name)
+}
+
+// PutWatched stores someone else's Event that the person added to this
+// calendar without being invited: a Watched Event.
+func (c *Calendar) PutWatched(name, icalData string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.objects[name] = icalData
+	delete(c.declined, name)
+	c.watched[name] = true
 }
 
 // PutDeclined stores an Event the person was invited to and declined.
@@ -138,6 +145,7 @@ func (c *Calendar) Remove(name string) {
 	defer c.mu.Unlock()
 	delete(c.objects, name)
 	delete(c.declined, name)
+	delete(c.watched, name)
 	delete(c.raw, name)
 }
 
@@ -296,9 +304,13 @@ func (s *Server) items(from, to time.Time, showDeclined bool) []map[string]any {
 			for _, e := range events {
 				recurring = recurring || e.IsRecurring() || e.IsOverride()
 			}
+			relation := c.relation
+			if c.watched[name] {
+				relation = "SUBSCRIBER"
+			}
 			occurrences, _ := recurrence.Expand(events, from, to)
 			for _, o := range occurrences {
-				all = append(all, found{o, c.relation, recurring})
+				all = append(all, found{o, relation, recurring})
 			}
 		}
 		c.mu.Unlock()

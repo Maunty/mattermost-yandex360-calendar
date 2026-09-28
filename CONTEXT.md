@@ -40,8 +40,12 @@ _Avoid_: team calendar, room calendar, group calendar
 A single scheduled occurrence in a calendar.
 _Avoid_: meeting, appointment, entry, booking
 
+**Watched Event**:
+Someone else's Event that a person has put on their own calendar without being invited to it. They follow it but are not a participant.
+_Avoid_: subscribed event, followed event, bookmarked event
+
 **A person's Events**:
-The Events a person organises or is invited to (required or optional) that they have not declined. Only these produce Reminders and appear in a Daily Summary. An Event marked as free time still counts.
+The Events a person organises, is invited to (required or optional), or watches, that they have not declined. Only these produce Reminders and appear in a Daily Summary. An Event marked as free time still counts.
 _Avoid_: my meetings, relevant events
 
 ### What the plugin sends

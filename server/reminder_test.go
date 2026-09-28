@@ -322,8 +322,8 @@ func TestManyPeopleWhoseEventsStartOnTheHourDoNotAllPollAtOnce(t *testing.T) {
 	}
 }
 
-// Which Events are the person's. CONTEXT.md: the Events they organise or are
-// invited to, required or optional, that they have not declined.
+// Which Events are the person's. CONTEXT.md: the Events they organise, are
+// invited to (required or optional), or watch, that they have not declined.
 
 func TestADeclinedEventProducesNoReminder(t *testing.T) {
 	start := moment(2026, 9, 24, 10, 0)
@@ -339,20 +339,40 @@ func TestADeclinedEventProducesNoReminder(t *testing.T) {
 	}
 }
 
-func TestAnEventOnASubscribedCalendarProducesNoReminder(t *testing.T) {
+func TestAWatchedEventIsReminded(t *testing.T) {
 	start := moment(2026, 9, 24, 10, 0)
 	h := connectedHarness(t, start.Add(-time.Hour))
-	colleague := h.provider.AddSubscribedCalendar("colleague", "A colleague's calendar")
-	colleague.Put("theirs", timedEvent("theirs", "Their one-to-one", start, start.Add(time.Hour)))
-	mine := h.calendar("events-1000001")
-	mine.Put("mine", timedEvent("mine", "My standup", start, start.Add(30*time.Minute)))
+	calendar := h.calendar("events-1000001")
+	calendar.PutWatched("talk", timedEvent("talk", "A talk I added from a link", start, start.Add(time.Hour)))
+
+	h.tick(start.Add(-time.Hour))
+	h.plugin.RunDelivery(start.Add(-10 * time.Minute))
+
+	if messages := h.reminders(); len(messages) != 1 {
+		t.Errorf("got %d reminders for a Watched Event, want one", len(messages))
+	}
+}
+
+func TestAnEventThePersonHasNoPartInProducesNoReminder(t *testing.T) {
+	start := moment(2026, 9, 24, 10, 0)
+	h := connectedHarness(t, start.Add(-time.Hour))
+	calendar := h.calendar("events-1000001")
+	calendar.PutItem("theirs", map[string]any{
+		"ical_uid":      "theirs",
+		"event_id":      "00000000-0000-0000-0000-000000000001",
+		"start":         map[string]string{"date_time": "2026-09-24T10:00:00", "time_zone": "Europe/Moscow"},
+		"end":           map[string]string{"date_time": "2026-09-24T11:00:00", "time_zone": "Europe/Moscow"},
+		"summary":       "Their one-to-one",
+		"relation_type": "NONE",
+	})
+	calendar.Put("mine", timedEvent("mine", "My standup", start, start.Add(30*time.Minute)))
 
 	h.tick(start.Add(-time.Hour))
 	h.plugin.RunDelivery(start.Add(-10 * time.Minute))
 
 	shown := allText(h.reminders())
 	if strings.Contains(shown, "Their one-to-one") {
-		t.Errorf("an Event on a Subscribed Calendar was reminded:\n%s", shown)
+		t.Errorf("an Event the person has no part in was reminded:\n%s", shown)
 	}
 	if !strings.Contains(shown, "My standup") {
 		t.Errorf("the person's own Event was not reminded:\n%s", shown)

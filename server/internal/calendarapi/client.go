@@ -70,9 +70,9 @@ func New(baseURL string, doer Doer, authorizer Authorizer) (*Client, error) {
 // could not be read: one malformed Event must not cost a person every other
 // Reminder.
 //
-// Only Events the person organises or is invited to come back. Declined Events
-// are left out by the API itself, and Events the person merely sees on a
-// Subscribed Calendar are dropped here.
+// Only the person's own Events come back: those they organise, are invited
+// to, or watch. Declined Events are left out by the API itself, and an Event
+// the person has no part in is dropped here.
 func (c *Client) Occurrences(ctx context.Context, from, to time.Time) ([]calendar.Occurrence, []error, error) {
 	query := url.Values{}
 	query.Set("from", from.UTC().Format(time.RFC3339))
@@ -108,11 +108,14 @@ func (c *Client) Occurrences(ctx context.Context, from, to time.Time) ([]calenda
 		maxPages, from.Format(time.RFC3339), to.Format(time.RFC3339))
 }
 
-// takesPart reports whether the person is part of the Event rather than
-// looking at it on somebody else's calendar.
+// takesPart reports whether the Event is one of the person's. SUBSCRIBER is
+// not a Subscribed Calendar: probing showed it on the person's own calendar,
+// for someone else's Event they had added without being invited, which is a
+// Watched Event. Anything else, including a relation this code has never
+// seen, is left out.
 func takesPart(relation string) bool {
 	switch relation {
-	case "ORGANIZER", "ATTENDEE", "OPTIONAL_ATTENDEE":
+	case "ORGANIZER", "ATTENDEE", "OPTIONAL_ATTENDEE", "SUBSCRIBER":
 		return true
 	}
 	return false

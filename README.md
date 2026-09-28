@@ -146,8 +146,7 @@ than an interface.
 - **Below the wire**: a [fake of the REST calendar API](server/internal/fakecalendarapi).
   Tests still describe calendars as iCalendar objects in named calendars. The
   fake answers the way the API does: one item per occurrence, declined Events
-  left out, Events on a Subscribed Calendar marked as such, and the whole list
-  paged.
+  left out, Watched Events marked as such, and the whole list paged.
 - **Above the plugin**: the standard Mattermost plugin test mock. Assertions
   are made on the posts that were created.
 
