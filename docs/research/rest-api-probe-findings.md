@@ -22,8 +22,20 @@ With a `calendar:read_all` token:
 - CalDAV refused the same token with 401. That matches
   [probe 4](caldav-probe-findings.md): CalDAV only opens for `calendar:all`.
 
-The narrower `calendar:events.read` wasn't tried. It needs an application
-granted only that scope.
+**Follow-up, 2026-09-28: `calendar:events.read` alone is enough.** A token
+from an application granted only that scope got the Event listing (the same
+week's items as the broader token), single Events, and participants, all with
+200. The identity lookup answered 200 with the account's id and login. CalDAV
+refused it with 401, as expected. This is the scope the plugin should ask
+for.
+
+**Follow-up, 2026-09-28: the REST API refuses a `calendar:all` token.** A token
+from an application granted only `calendar:all` (the scope CalDAV needs) got
+403 from the Event listing, with a message saying the application lacks the
+rights. The same token got 207 from CalDAV and 200 from the identity lookup.
+The two transports need disjoint scopes. So a Connection consented for one
+can't read through the other, and switching transports means everybody
+consents again, in either direction.
 
 ### Recurring Events come back one item per occurrence
 
@@ -94,10 +106,6 @@ Calendar.
 
 ## Still open
 
-- Whether `calendar:events.read` alone is enough, including for the identity
-  lookup.
-- Whether a token carrying `calendar:all` (the CalDAV scope) is accepted by the
-  REST API.
 - Whether Standalone Accounts are served.
 - How a Subscribed Calendar appears, if it does at all.
 - Whether a Watched Event on a Shared Calendar comes back in the default
