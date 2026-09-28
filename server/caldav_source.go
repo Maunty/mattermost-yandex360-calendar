@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/Maunty/mattermost-ya-calendar/server/internal/caldav"
-	"github.com/Maunty/mattermost-ya-calendar/server/internal/calendar"
-	"github.com/Maunty/mattermost-ya-calendar/server/internal/recurrence"
+	"github.com/maunty/mattermost-yandex360-calendar/server/internal/caldav"
+	"github.com/maunty/mattermost-yandex360-calendar/server/internal/calendar"
+	"github.com/maunty/mattermost-yandex360-calendar/server/internal/recurrence"
 )
 
 // readFromCalDAV is the fallback event source (ADR 0002). It is not wired in:

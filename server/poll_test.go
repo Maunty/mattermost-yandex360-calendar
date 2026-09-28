@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Maunty/mattermost-ya-calendar/server/internal/fakecalendarapi"
+	"github.com/maunty/mattermost-yandex360-calendar/server/internal/fakecalendarapi"
 )
 
 // Ticket 06: background polling. Nothing is delivered here; what is checked is

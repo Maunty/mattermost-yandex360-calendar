@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Maunty/mattermost-ya-calendar/server/internal/calendarapi"
-	"github.com/Maunty/mattermost-ya-calendar/server/internal/fakecalendarapi"
+	"github.com/maunty/mattermost-yandex360-calendar/server/internal/calendarapi"
+	"github.com/maunty/mattermost-yandex360-calendar/server/internal/fakecalendarapi"
 )
 
 var (

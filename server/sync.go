@@ -5,8 +5,8 @@ import (
 	"hash/fnv"
 	"time"
 
-	"github.com/Maunty/mattermost-ya-calendar/server/internal/calendar"
-	"github.com/Maunty/mattermost-ya-calendar/server/internal/calendarapi"
+	"github.com/maunty/mattermost-yandex360-calendar/server/internal/calendar"
+	"github.com/maunty/mattermost-yandex360-calendar/server/internal/calendarapi"
 )
 
 // How polling is paced.

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Maunty/mattermost-ya-calendar/server/internal/calendar"
+	"github.com/maunty/mattermost-yandex360-calendar/server/internal/calendar"
 )
 
 // Rendering, escaping and encryption: the pieces that decide what a person

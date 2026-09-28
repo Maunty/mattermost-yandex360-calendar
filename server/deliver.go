@@ -3,7 +3,7 @@ package main
 import (
 	"time"
 
-	"github.com/Maunty/mattermost-ya-calendar/server/internal/calendar"
+	"github.com/maunty/mattermost-yandex360-calendar/server/internal/calendar"
 )
 
 // sentRecordFloor is the shortest time a "this was already sent" record is

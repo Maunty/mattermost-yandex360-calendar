@@ -1,4 +1,4 @@
-module github.com/Maunty/mattermost-ya-calendar
+module github.com/maunty/mattermost-yandex360-calendar
 
 go 1.26.7
 

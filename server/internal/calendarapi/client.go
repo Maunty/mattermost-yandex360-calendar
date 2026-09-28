@@ -21,7 +21,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Maunty/mattermost-ya-calendar/server/internal/calendar"
+	"github.com/maunty/mattermost-yandex360-calendar/server/internal/calendar"
 )
 
 // eventsPath is the one route this package reads.

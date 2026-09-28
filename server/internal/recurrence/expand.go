@@ -14,7 +14,7 @@ import (
 
 	"github.com/teambition/rrule-go"
 
-	"github.com/Maunty/mattermost-ya-calendar/server/internal/calendar"
+	"github.com/maunty/mattermost-yandex360-calendar/server/internal/calendar"
 )
 
 // Problem records one Event that could not be expanded. Expansion continues

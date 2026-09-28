@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Maunty/mattermost-ya-calendar/server/internal/calendar"
-	"github.com/Maunty/mattermost-ya-calendar/server/internal/recurrence"
+	"github.com/maunty/mattermost-yandex360-calendar/server/internal/calendar"
+	"github.com/maunty/mattermost-yandex360-calendar/server/internal/recurrence"
 )
 
 // These tests run against the real expansion with no fakes, no mocks and no

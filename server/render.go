@@ -9,7 +9,7 @@ import (
 
 	"github.com/mattermost/mattermost/server/public/model"
 
-	"github.com/Maunty/mattermost-ya-calendar/server/internal/calendar"
+	"github.com/maunty/mattermost-yandex360-calendar/server/internal/calendar"
 )
 
 // Everything a provider put in a calendar is untrusted input on its way into a

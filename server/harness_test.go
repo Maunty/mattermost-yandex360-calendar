@@ -16,7 +16,7 @@ import (
 	"github.com/mattermost/mattermost/server/public/plugin/plugintest"
 	"github.com/mattermost/mattermost/server/public/pluginapi"
 
-	"github.com/Maunty/mattermost-ya-calendar/server/internal/fakecalendarapi"
+	"github.com/maunty/mattermost-yandex360-calendar/server/internal/fakecalendarapi"
 )
 
 // The tests in this package run against two substitutions and nothing else:

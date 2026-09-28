@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Maunty/mattermost-ya-calendar/server/internal/caldav"
-	"github.com/Maunty/mattermost-ya-calendar/server/internal/calendarapi"
+	"github.com/maunty/mattermost-yandex360-calendar/server/internal/caldav"
+	"github.com/maunty/mattermost-yandex360-calendar/server/internal/calendarapi"
 )
 
 // Where Yandex lives. These are fields on the client rather than constants in

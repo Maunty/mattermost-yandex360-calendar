@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Maunty/mattermost-ya-calendar/server/internal/calendar"
+	"github.com/maunty/mattermost-yandex360-calendar/server/internal/calendar"
 )
 
 // object wraps VEVENT bodies in the VCALENDAR envelope a CalDAV collection

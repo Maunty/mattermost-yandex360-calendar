@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Maunty/mattermost-ya-calendar/server/internal/caldav"
-	"github.com/Maunty/mattermost-ya-calendar/server/internal/fakecaldav"
+	"github.com/maunty/mattermost-yandex360-calendar/server/internal/caldav"
+	"github.com/maunty/mattermost-yandex360-calendar/server/internal/fakecaldav"
 )
 
 func exportedMethods() []string {
