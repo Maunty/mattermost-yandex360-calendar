@@ -32,7 +32,10 @@ make deploy       # build, package, upload, enable
 ```
 
 No `dev/.env` is needed — everything has a working default. Mattermost is on
-port 8065, forwarded to your browser.
+port 8065, forwarded to your browser by VS Code rather than published by
+Docker, so it is reachable only while the dev container is open. If something
+else already holds local port 8065, VS Code says so instead of choosing another
+port, because the Yandex redirect would still point at 8065.
 
 Inside the container, `MM_SERVER_URL` is already set to `http://mattermost:8065`,
 the service name on the compose network, because that is how one container

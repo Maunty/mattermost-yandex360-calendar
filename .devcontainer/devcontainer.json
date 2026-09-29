@@ -28,13 +28,20 @@
 	// connecting a calendar finishes by Yandex telling *your browser* to go
 	// there. Yandex itself never connects to it, so the server does not have
 	// to be reachable from the internet, only from the browser you consent in.
+	//
+	// VS Code forwards from the mattermost service itself, and it is the only
+	// thing that binds 8065: the compose override stops Docker publishing the
+	// same port, which is what made a restart race the old forward for it.
+	// requireLocalPort refuses to fall back to another port silently, because
+	// the Yandex redirect would still point at 8065.
 	"forwardPorts": [
-		8065
+		"mattermost:8065"
 	],
 	"portsAttributes": {
 		"8065": {
 			"label": "Mattermost",
-			"onAutoForward": "notify"
+			"onAutoForward": "notify",
+			"requireLocalPort": true
 		}
 	},
 

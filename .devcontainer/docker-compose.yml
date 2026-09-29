@@ -42,3 +42,6 @@ services:
     restart: "no"
   mattermost:
     restart: "no"
+    # VS Code forwards 8065 to the browser (devcontainer.json). Publishing it
+    # from Docker as well has the two fight over the host port on restart.
+    ports: !reset []
