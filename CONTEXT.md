@@ -54,6 +54,14 @@ _Avoid_: my meetings, relevant events
 A one-off message sent to one person shortly before one Event begins.
 _Avoid_: notification, alert, ping, heads-up
 
+**Lead Time**:
+How long before an Event begins its Reminder is sent. Each person has one Lead Time for all their Events: the one they chose, or else the Server Default.
+_Avoid_: reminder time, offset, advance notice, notification time
+
+**Server Default**:
+The Lead Time an administrator sets for everyone who has not chosen their own.
+_Avoid_: global lead time, admin setting
+
 **Daily Summary**:
 The once-a-day message listing that person's Events for the day.
 _Avoid_: agenda, daily agenda, digest, brief
