@@ -35,6 +35,11 @@ const pageSize = 100
 // poll for everybody behind this person.
 const maxPages = 50
 
+// requestsPerSecond keeps one person's reads under Yandex's limit of 5
+// requests a second for each person. It only bites when a read runs to
+// several pages.
+const requestsPerSecond = 4
+
 // maxResponseBytes caps a single page.
 const maxResponseBytes = 8 << 20
 
@@ -63,7 +68,7 @@ func New(baseURL string, doer Doer, authorizer Authorizer) (*Client, error) {
 	if doer == nil {
 		doer = &http.Client{Timeout: 30 * time.Second}
 	}
-	return &Client{base: base, doer: doer, authorizer: authorizer}, nil
+	return &Client{base: base, doer: NewThrottle(doer, requestsPerSecond), authorizer: authorizer}, nil
 }
 
 // Occurrences returns the person's Events happening during [from, to), one per
@@ -151,7 +156,10 @@ func (c *Client) page(ctx context.Context, query url.Values) (*eventsPage, error
 		return nil, &TransportError{Err: err}
 	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, &StatusError{StatusCode: resp.StatusCode}
+		// A Retry-After that is not a whole number of seconds is ignored:
+		// the next run is only a minute away anyway.
+		seconds, _ := strconv.Atoi(resp.Header.Get("Retry-After"))
+		return nil, &StatusError{StatusCode: resp.StatusCode, RetryAfter: time.Duration(max(seconds, 0)) * time.Second}
 	}
 
 	var page eventsPage

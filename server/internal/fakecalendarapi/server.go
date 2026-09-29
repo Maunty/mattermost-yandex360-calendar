@@ -45,6 +45,9 @@ type Server struct {
 	// asked for, so that a test can make paging happen with a handful of
 	// Events.
 	PageSize int
+	// RetryAfter, if set, is sent as the Retry-After header of every injected
+	// failure.
+	RetryAfter string
 
 	mu         sync.Mutex
 	calendars  []*Calendar
@@ -202,10 +205,13 @@ func (s *Server) nextFailure() int {
 func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	s.requests = append(s.requests, Request{Method: r.Method, Path: r.URL.Path, Query: r.URL.RawQuery})
-	token := s.Token
+	token, retryAfter := s.Token, s.RetryAfter
 	s.mu.Unlock()
 
 	if status := s.nextFailure(); status != 0 {
+		if retryAfter != "" {
+			w.Header().Set("Retry-After", retryAfter)
+		}
 		writeError(w, status, "injected_failure")
 		return
 	}

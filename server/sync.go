@@ -77,7 +77,13 @@ func (p *Plugin) pollUser(ctx context.Context, userID string, now time.Time) err
 
 	// Whatever happened, this person is not polled again until their next due
 	// time, so a failing Connection does not turn into a tight retry loop.
+	// The exception is Yandex asking this person's reads to slow down: they
+	// are read again as soon as it allows, which without a Retry-After is the
+	// next run.
 	state.NextPollAt = nextPollAt(userID, now)
+	if wait, limited := calendarapi.RateLimited(pollErr); limited {
+		state.NextPollAt = now.Add(wait)
+	}
 	if pollErr != nil {
 		if saveErr := p.store.SaveSyncState(userID, state); saveErr != nil {
 			p.client.Log.Warn("Could not save sync state", "user_id", userID, "error", saveErr.Error())

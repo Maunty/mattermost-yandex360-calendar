@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 )
 
 // StatusError is a response the provider refused. As on the CalDAV path, the
@@ -12,6 +13,9 @@ import (
 // bad afternoon must not be.
 type StatusError struct {
 	StatusCode int
+	// RetryAfter is how long the provider asked to be left alone, from a
+	// Retry-After header in seconds. Zero when it did not say.
+	RetryAfter time.Duration
 }
 
 func (e *StatusError) Error() string {
@@ -52,4 +56,14 @@ func IsTransient(err error) bool {
 		return status.StatusCode >= 500 || status.StatusCode == http.StatusTooManyRequests
 	}
 	return false
+}
+
+// RateLimited reports whether the provider said the application is making too
+// many requests, and how long it asked for before the next one.
+func RateLimited(err error) (time.Duration, bool) {
+	var status *StatusError
+	if !errors.As(err, &status) || status.StatusCode != http.StatusTooManyRequests {
+		return 0, false
+	}
+	return status.RetryAfter, true
 }
