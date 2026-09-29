@@ -170,9 +170,9 @@ func (p *Plugin) commandDisconnect(args *model.CommandArgs) *model.CommandRespon
 		p.client.Log.Error("Could not delete a Connection", "error", err.Error())
 		return ephemeral("Something went wrong disconnecting. Please try again in a moment.")
 	}
-	if err := p.store.DeleteSettings(args.UserId); err != nil {
-		p.client.Log.Warn("Could not delete settings during disconnect", "error", err.Error())
-	}
+	// Settings are kept. They are choices about Mattermost, not about the
+	// Yandex account, and the usual reason to disconnect is to reconnect with
+	// a different account.
 
 	return ephemeral("Your Yandex Calendar is disconnected. I have forgotten your tokens and will send you nothing further.")
 }

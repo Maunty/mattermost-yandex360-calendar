@@ -225,7 +225,7 @@ func TestConnectingWhileAlreadyConnectedSaysSo(t *testing.T) {
 	}
 }
 
-func TestDisconnectForgetsEverythingAndSaysSo(t *testing.T) {
+func TestDisconnectForgetsTheTokensAndSaysSo(t *testing.T) {
 	h := newHarness(t)
 	now := moment(2026, 9, 24, 9, 0)
 	h.connect(now)
@@ -244,6 +244,26 @@ func TestDisconnectForgetsEverythingAndSaysSo(t *testing.T) {
 	for key, entry := range h.api.kv {
 		if strings.HasPrefix(key, connectionKeyPrefix) && len(entry.value) > 0 {
 			t.Errorf("a stored Connection is left behind under %q", key)
+		}
+	}
+}
+
+func TestChoicesSurviveDisconnectingAndReconnecting(t *testing.T) {
+	// Disconnecting is how somebody who connected the wrong account fixes it.
+	// Their choices are about Mattermost, not about the account, so they stay.
+	h := newHarness(t)
+	now := moment(2026, 9, 24, 9, 0)
+	h.connect(now)
+	h.command("/yacal reminders 1", now)
+	h.command("/yacal summary 07:15", now)
+
+	h.command("/yacal disconnect", now)
+	h.connect(now)
+
+	shown := h.command("/yacal settings", now).Text
+	for _, want := range []string{"a minute before each event (your choice)", "07:15"} {
+		if !strings.Contains(shown, want) {
+			t.Errorf("reconnecting lost %q:\n%s", want, shown)
 		}
 	}
 }

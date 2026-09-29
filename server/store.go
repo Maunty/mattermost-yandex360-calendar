@@ -225,10 +225,6 @@ func (s *Store) SaveSettings(userID string, settings Settings) error {
 	return err
 }
 
-func (s *Store) DeleteSettings(userID string) error {
-	return s.kv.Delete(settingsKeyPrefix + userID)
-}
-
 // SyncState reads what the last poll left behind. A person who has never been
 // polled has an empty one, which is not an error.
 func (s *Store) SyncState(userID string) (*SyncState, error) {
