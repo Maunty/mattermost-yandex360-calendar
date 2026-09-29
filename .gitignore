@@ -28,3 +28,6 @@ server/dist/
 # Webapp build (remove if this plugin has no webapp component)
 webapp/node_modules/
 webapp/dist/
+
+# Local issue tracker and specs, kept out of the repository
+.scratch/
