@@ -4,7 +4,7 @@
 > Yandex granted early access to a REST calendar API, and it exists. The verdict below
 > held for what was publicly documented at the time, and is kept as a record.
 
-**Date:** 2026-09-24. **Ticket:** [01](../../.scratch/yandex-calendar-v1/issues/01-spike-locate-rest-api.md).
+**Date:** 2026-09-24. **Ticket:** v1 01, in the local issue tracker.
 **Verdict: no usable REST calendar API could be located. CalDAV is confirmed as
 the transport, and recurrence must be expanded client-side.**
 

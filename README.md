@@ -172,10 +172,24 @@ go test ./...
 
 ## What is deliberately not here
 
-Writing to calendars, responding to invitations, status and do-not-disturb
-synchronisation, shared calendars, tasks, free/busy, a calendar view inside
-Mattermost, and localisation. The reasoning for each is in
-[the spec](.scratch/yandex-calendar-v1/spec.md).
+- **Writing to calendars, including responding to invitations.** The plugin
+  only reads. See [ADR 0003](docs/adr/0003-read-only-by-design.md).
+- **Status and do-not-disturb synchronisation.** It would need much more
+  frequent polling, and it changes a person's presence rather than just
+  telling them something.
+- **Shared calendars posted to a channel.** A person's own Events on a shared
+  calendar are already included. Posting a team calendar into a channel is a
+  separate, smaller feature.
+- **Provisioning without per-person consent** through a Yandex 360 service
+  application. See [ADR 0001](docs/adr/0001-oauth-consent-for-connections.md).
+- **Several reminders per event, or Yandex's own per-event notification
+  settings.** Each person has one Lead Time for all their events.
+- **Tasks, free/busy, and resource or room calendars.** Tasks are filtered
+  out, and nothing else is read.
+- **A calendar view inside Mattermost.** The plugin sends messages; it does not
+  display a calendar.
+- **Localisation.** English only for now. Most likely users speak Russian, so
+  this is worth revisiting.
 
 ## Documents worth reading before changing anything
 
@@ -184,6 +198,8 @@ Mattermost, and localisation. The reasoning for each is in
   consent rather than app passwords.
 - [docs/adr/0002](docs/adr/0002-rest-api-replaces-caldav.md) — why Events are
   read over the REST API, and why CalDAV is kept.
+- [docs/adr/0003](docs/adr/0003-read-only-by-design.md) — why the plugin never
+  writes to a calendar.
 - [docs/research/caldav-probe-findings.md](docs/research/caldav-probe-findings.md)
   — four probes of CalDAV against a live account. Two of them overturned conclusions
   reached from documentation alone; several decisions in this codebase only

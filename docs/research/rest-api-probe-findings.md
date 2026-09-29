@@ -1,6 +1,6 @@
 # REST calendar API: first probe against a real account
 
-**Date:** 2026-09-28. **Ticket:** [rest-transport 01](../../.scratch/rest-transport/issues/01-day-one-probe.md).
+**Date:** 2026-09-28. **Ticket:** rest-transport 01, in the local issue tracker.
 **Account:** a member account in a Yandex 360 Organization, with a
 realistic amount of history on it. **Token:** issued through an OAuth application registered by
 the Organization's owner, granted `calendar:read_all` and nothing else.
