@@ -84,13 +84,13 @@ dev-up:
 ## dev-down stops the server and keeps its data.
 .PHONY: dev-down
 dev-down:
-	$(COMPOSE) down
+	$(COMPOSE) down --remove-orphans
 
 ## dev-destroy stops the server and deletes its data, including the database,
 ## the uploaded plugin and the server config.
 .PHONY: dev-destroy
 dev-destroy:
-	$(COMPOSE) down -v
+	$(COMPOSE) down -v --remove-orphans
 
 .PHONY: dev-logs
 dev-logs:

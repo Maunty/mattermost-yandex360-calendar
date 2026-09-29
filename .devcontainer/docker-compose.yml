@@ -34,3 +34,11 @@ services:
     # declare, because compose puts every service on the same network.
     networks:
       - default
+
+  # dev/compose.yml restarts these on its own, which suits a server that lives
+  # on another machine. Here it means a stack that outlives the dev container
+  # and comes back after a reboot nobody asked it to survive.
+  postgres:
+    restart: "no"
+  mattermost:
+    restart: "no"

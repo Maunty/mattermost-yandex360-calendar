@@ -126,6 +126,11 @@ make dev-destroy       # stop and delete the volumes
 config. It is the fastest way back to a server that has never seen this plugin,
 which is worth doing before believing that a fresh install works.
 
+Leaving the dev container does not do either. Closing its window only stops
+the stack, and detaching or losing a remote session may not even do that. Run
+`make dev-down` on the host to remove the containers, the workspace one
+included.
+
 ## When it goes wrong
 
 **Connecting works until the last step, then fails.** Almost always
