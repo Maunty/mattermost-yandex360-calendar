@@ -5,8 +5,10 @@ Stop being surprised by your own meetings.
 This plugin connects a person's Yandex Calendar to Mattermost and sends them
 two kinds of direct message:
 
-- **A reminder**, ten minutes before each event starts, naming it, when it
-  runs, where it is, and linking to the Telemost call if there is one.
+- **A reminder** before each event starts, naming it, when it runs, where it
+  is, and linking to the Telemost call if there is one. Each person chooses how
+  many minutes ahead, from 0 to 60; anybody who doesn't choose gets the
+  server's default, ten minutes unless an administrator changes it.
 - **A daily summary**, once each morning, listing that day's events.
 
 Connecting is one command. You run `/yacal connect`, approve access on Yandex's
@@ -27,6 +29,8 @@ events (`calendar:events.read`). See
 | `/yacal today` | List today's events |
 | `/yacal settings` | Show your current choices |
 | `/yacal reminders on\|off` | Turn reminders on or off |
+| `/yacal reminders <minutes>` | Choose how many minutes before each event reminders arrive, from 0 to 60 |
+| `/yacal reminders default` | Follow the server's default again |
 | `/yacal summary on\|off` | Turn the daily summary on or off |
 | `/yacal summary HH:MM` | Choose when the daily summary arrives |
 | `/yacal help` | List all of this |

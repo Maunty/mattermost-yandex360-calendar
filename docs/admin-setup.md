@@ -60,7 +60,7 @@ In the System Console, under **Plugins → Yandex Calendar**:
 |---|---|
 | Yandex Client ID | The ClientID from step 1 |
 | Yandex Client Secret | The Client secret from step 1 |
-| Reminder Lead Time | How long before an event its reminder is sent. Ten minutes by default. This applies to everyone on the server; it is not a per-user setting. |
+| Default Reminder Lead Time | How long before an event its reminder is sent, for people who haven't chosen their own with `/yacal reminders <minutes>`. From 1 to 60 minutes; empty or 0 means ten, and anything above 60 is treated as 60. A person's own choice is kept when you change this. |
 | At Rest Encryption Key | Generated for you. Leave it alone. |
 
 Until the Client ID and the Client Secret are both set, the plugin does

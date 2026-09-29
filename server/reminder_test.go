@@ -40,13 +40,10 @@ func TestAReminderArrivesTheLeadTimeBeforeTheEvent(t *testing.T) {
 	}
 }
 
-func TestTheReminderLeadTimeIsWhatTheAdministratorSet(t *testing.T) {
+func TestTheServerDefaultIsWhatTheAdministratorSet(t *testing.T) {
 	start := moment(2026, 9, 24, 10, 0)
 	h := connectedHarness(t, start.Add(-2*time.Hour))
-	h.plugin.setConfiguration(&configuration{
-		ClientID: "client-id", ClientSecret: "client-secret",
-		EncryptionKey: "an-encryption-key-for-tests", ReminderLeadMinutes: 30,
-	})
+	h.setServerDefault(30)
 	calendar := h.calendar("events-1000001")
 	calendar.Put("standup", timedEvent("standup", "Standup", start, start.Add(30*time.Minute)))
 
@@ -54,7 +51,7 @@ func TestTheReminderLeadTimeIsWhatTheAdministratorSet(t *testing.T) {
 	h.plugin.RunDelivery(start.Add(-25 * time.Minute))
 
 	if messages := h.reminders(); len(messages) != 1 {
-		t.Fatalf("got %d reminders 25 minutes before a 30-minute lead time, want one", len(messages))
+		t.Fatalf("got %d reminders 25 minutes before a 30-minute Server Default, want one", len(messages))
 	}
 }
 

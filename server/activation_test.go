@@ -203,18 +203,6 @@ func TestAnUnknownSubcommandIsAnsweredWithHelp(t *testing.T) {
 	}
 }
 
-func TestTheReminderLeadTimeFallsBackToTenMinutes(t *testing.T) {
-	for _, configured := range []int{0, -5} {
-		c := &configuration{ReminderLeadMinutes: configured}
-		if c.ReminderLead() != defaultReminderLead {
-			t.Errorf("a lead time of %d gave %v, want ten minutes", configured, c.ReminderLead())
-		}
-	}
-	if got := (&configuration{ReminderLeadMinutes: 100000}).ReminderLead(); got != maxReminderLead {
-		t.Errorf("an absurd lead time gave %v, want it capped at a day", got)
-	}
-}
-
 func TestAConfigurationMissingAnythingIsNotUsable(t *testing.T) {
 	full := configuration{ClientID: "a", ClientSecret: "b", EncryptionKey: "c"}
 	if !full.IsConfigured() {

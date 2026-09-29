@@ -60,7 +60,8 @@ func (p *Plugin) deliverTo(userID string, now time.Time) error {
 	loc := p.userLocation(userID)
 
 	if settings.RemindersEnabled() {
-		p.sendDueReminders(userID, state, loc, now)
+		lead, _ := p.getConfiguration().LeadTime(settings)
+		p.sendDueReminders(userID, lead, state, loc, now)
 	}
 	if settings.DailySummaryEnabled() {
 		p.sendDailySummary(userID, settings, state, loc, now)
@@ -68,13 +69,15 @@ func (p *Plugin) deliverTo(userID string, now time.Time) error {
 	return nil
 }
 
-// sendDueReminders sends one message per occurrence whose lead time has
+// sendDueReminders sends one message per occurrence whose Lead Time has
 // arrived and which has not started yet.
-func (p *Plugin) sendDueReminders(userID string, state *SyncState, loc *time.Location, now time.Time) {
-	lead := p.getConfiguration().ReminderLead()
-
+//
+// Delivery wakes once a tick, so a Reminder is due one tick early: the run
+// that sends it is the last one with at least the Lead Time still to go, and
+// nobody is given less warning than they asked for.
+func (p *Plugin) sendDueReminders(userID string, lead time.Duration, state *SyncState, loc *time.Location, now time.Time) {
 	for _, occurrence := range state.Occurrences {
-		// An all-day Event has no start time to be ten minutes early for.
+		// An all-day Event has no start time to be early for.
 		if occurrence.AllDay {
 			continue
 		}
@@ -83,7 +86,7 @@ func (p *Plugin) sendDueReminders(userID string, state *SyncState, loc *time.Loc
 		if !occurrence.Start.After(now) {
 			continue
 		}
-		if occurrence.Start.Sub(now) > lead {
+		if occurrence.Start.Sub(now) > lead+tickInterval {
 			continue
 		}
 

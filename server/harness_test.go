@@ -370,6 +370,14 @@ func (h *harness) holdBackScheduledJobs() {
 // connect puts the person through the real consent flow, callback and all.
 func (h *harness) connect(now time.Time) {
 	h.t.Helper()
+	h.consent(now)
+	h.clearPosts()
+}
+
+// consent is connect without forgetting the messages it produced, for the
+// tests that are about those messages.
+func (h *harness) consent(now time.Time) {
+	h.t.Helper()
 
 	response := h.command("/yacal connect", now)
 	link := linkFrom(h.t, response.Text)
@@ -384,7 +392,15 @@ func (h *harness) connect(now time.Time) {
 	if recorder.Code != http.StatusOK {
 		h.t.Fatalf("the consent callback answered %d: %s", recorder.Code, recorder.Body.String())
 	}
-	h.clearPosts()
+}
+
+// setServerDefault is an administrator saving the Server Default in the
+// System Console. Zero leaves the field empty.
+func (h *harness) setServerDefault(minutes int) {
+	h.t.Helper()
+	configuration := h.plugin.getConfiguration().Clone()
+	configuration.ReminderLeadMinutes = minutes
+	h.plugin.setConfiguration(configuration)
 }
 
 // calendar adds a calendar the person owns.

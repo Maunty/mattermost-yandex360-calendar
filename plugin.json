@@ -39,9 +39,9 @@
             },
             {
                 "key": "ReminderLeadMinutes",
-                "display_name": "Reminder Lead Time (minutes)",
+                "display_name": "Default Reminder Lead Time (minutes)",
                 "type": "number",
-                "help_text": "How long before an event starts its reminder is sent. Applies to every user on this server.",
+                "help_text": "How long before an event starts its reminder is sent, for people who have not chosen their own with /yacal reminders <minutes>. From 1 to 60; empty or 0 means 10, and anything above 60 is treated as 60.",
                 "placeholder": "",
                 "default": 10
             },

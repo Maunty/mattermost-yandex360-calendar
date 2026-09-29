@@ -68,6 +68,10 @@ type Settings struct {
 	// DailySummaryTime is "HH:MM" in the person's own timezone. Empty means
 	// the default.
 	DailySummaryTime string
+	// LeadMinutes is the Lead Time the person chose. Nil means they have not
+	// chosen and follow the Server Default, which keeps a chosen 0 distinct
+	// from not having chosen.
+	LeadMinutes *int `json:",omitempty"`
 }
 
 const defaultSummaryTime = "08:00"

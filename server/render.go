@@ -143,9 +143,20 @@ func reminderPost(occurrence calendar.Occurrence, loc *time.Location, lead time.
 	return post
 }
 
+// leadText is a Lead Time as a person reads it in their settings. A Lead Time
+// of 0 is a Reminder in the last minute, not "less than a minute" ahead.
+func leadText(lead time.Duration) string {
+	if lead == 0 {
+		return "in the last minute before each event"
+	}
+	return humaniseLead(lead) + " before each event"
+}
+
 func humaniseLead(lead time.Duration) string {
 	minutes := int(lead.Round(time.Minute).Minutes())
 	switch {
+	case lead < 30*time.Second:
+		return "less than a minute"
 	case minutes <= 1:
 		return "a minute"
 	case minutes < 60:

@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -30,8 +32,15 @@ func commandDefinition() *model.Command {
 	root.AddCommand(model.NewAutocompleteData("today", "", "List today's events"))
 	root.AddCommand(model.NewAutocompleteData("settings", "", "Show your current choices"))
 
-	reminders := model.NewAutocompleteData("reminders", "[on|off]", "Turn reminders before each event on or off")
-	reminders.AddStaticListArgument("Whether to send reminders", true, onOff)
+	leadTimes := []model.AutocompleteListItem{
+		{Item: "0", HelpText: "In the last minute before it starts"},
+		{Item: "1"}, {Item: "5"}, {Item: "10"}, {Item: "15"}, {Item: "30"},
+		{Item: "default", HelpText: "Follow the server's default"},
+	}
+	reminders := model.NewAutocompleteData("reminders", "[on|off|minutes|default]",
+		"Turn reminders on or off, or choose how many minutes before each event they arrive")
+	reminders.AddStaticListArgument("on, off, minutes from 0 to 60, or default", true,
+		append(append([]model.AutocompleteListItem{}, onOff...), leadTimes...))
 	root.AddCommand(reminders)
 
 	summary := model.NewAutocompleteData("summary", "[on|off|HH:MM]", "Turn the daily summary on or off, or choose when it arrives")
@@ -109,6 +118,8 @@ func (p *Plugin) helpText() string {
 	b.WriteString("| `/yacal today` | List today's events |\n")
 	b.WriteString("| `/yacal settings` | Show your current choices |\n")
 	b.WriteString("| `/yacal reminders on\\|off` | Turn reminders before each event on or off |\n")
+	b.WriteString("| `/yacal reminders <minutes>` | Choose how many minutes before each event reminders arrive, from 0 to 60 |\n")
+	b.WriteString("| `/yacal reminders default` | Follow the server's default again |\n")
 	b.WriteString("| `/yacal summary on\\|off` | Turn the daily summary on or off |\n")
 	b.WriteString("| `/yacal summary HH:MM` | Choose when the daily summary arrives |\n")
 	b.WriteString("| `/yacal help` | Show this |\n")
@@ -207,12 +218,13 @@ func (p *Plugin) commandSettings(args *model.CommandArgs) *model.CommandResponse
 	}
 
 	loc := p.userLocation(args.UserId)
-	lead := humaniseLead(p.getConfiguration().ReminderLead())
+	lead, chosen := p.getConfiguration().LeadTime(settings)
 
 	var b strings.Builder
 	b.WriteString("### Your Yandex Calendar settings\n")
 	b.WriteString(fmt.Sprintf("| Connected account | %s |\n|---|---|\n", sanitise(connection.YandexLogin)))
-	b.WriteString(fmt.Sprintf("| Reminders | %s, %s before each event |\n", onOffText(settings.RemindersEnabled()), lead))
+	b.WriteString(fmt.Sprintf("| Reminders | %s, %s (%s) |\n",
+		onOffText(settings.RemindersEnabled()), leadText(lead), leadSource(chosen)))
 	b.WriteString(fmt.Sprintf("| Daily summary | %s, at %s |\n", onOffText(settings.DailySummaryEnabled()), settings.SummaryTimeText()))
 	b.WriteString(fmt.Sprintf("| Your timezone | %s |\n", loc.String()))
 	b.WriteString(fmt.Sprintf("| Calendar last read | %s |\n", p.lastReadText(args.UserId, loc)))
@@ -220,7 +232,6 @@ func (p *Plugin) commandSettings(args *model.CommandArgs) *model.CommandResponse
 	if !connection.Active {
 		b.WriteString("\n" + reconnectMessage)
 	}
-	b.WriteString("\nThe reminder lead time is set for the whole server by an administrator.")
 	return ephemeral(b.String())
 }
 
@@ -232,16 +243,45 @@ func (p *Plugin) lastReadText(userID string, loc *time.Location) string {
 	return state.LastSuccessAt.In(loc).Format("Mon 2 Jan, 15:04")
 }
 
+func leadSource(chosen bool) string {
+	if chosen {
+		return "your choice"
+	}
+	return "server default"
+}
+
 func (p *Plugin) commandReminders(args *model.CommandArgs, rest []string) *model.CommandResponse {
 	return p.updateSettings(args, func(settings *Settings) (string, error) {
-		on, err := parseOnOff(rest)
-		if err != nil {
-			return "", err
+		if len(rest) == 0 {
+			return "", errors.New(capitalise(leadTimeUsage))
 		}
-		settings.RemindersDisabled = !on
-		return fmt.Sprintf("Reminders are now **%s**. Your daily summary is unchanged.", onOffText(on)), nil
+		value := strings.ToLower(rest[0])
+
+		if on, err := parseOnOff(rest); err == nil {
+			settings.RemindersDisabled = !on
+			return fmt.Sprintf("Reminders are now **%s**. Your daily summary is unchanged.", onOffText(on)), nil
+		}
+
+		if value == "default" {
+			settings.LeadMinutes = nil
+			lead, _ := p.getConfiguration().LeadTime(*settings)
+			return fmt.Sprintf("Reminders will follow the server default: **%s**.", leadText(lead)), nil
+		}
+
+		minutes, err := strconv.Atoi(value)
+		if err != nil || minutes < 0 || minutes > maxLeadMinutes {
+			return "", fmt.Errorf("`%s` is not accepted. %s", sanitise(value), capitalise(leadTimeUsage))
+		}
+		settings.LeadMinutes = &minutes
+		settings.RemindersDisabled = false
+		lead, _ := p.getConfiguration().LeadTime(*settings)
+		return fmt.Sprintf("Reminders are **on**, and will arrive **%s**.", leadText(lead)), nil
 	})
 }
+
+// leadTimeUsage says everything `/yacal reminders` accepts.
+var leadTimeUsage = fmt.Sprintf(
+	"say `on`, `off`, `default`, or a whole number of minutes from 0 to %d, such as `/yacal reminders 5`", maxLeadMinutes)
 
 func (p *Plugin) commandSummary(args *model.CommandArgs, rest []string) *model.CommandResponse {
 	return p.updateSettings(args, func(settings *Settings) (string, error) {

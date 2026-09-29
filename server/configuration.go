@@ -17,13 +17,13 @@ type configuration struct {
 	EncryptionKey       string
 }
 
-// defaultReminderLead is the lead time an administrator gets without doing
-// anything, and the one every user story is written against.
+// defaultReminderLead is the Server Default an administrator gets without
+// doing anything, and the one every user story is written against.
 const defaultReminderLead = 10 * time.Minute
 
-// maxReminderLead keeps a mistyped setting from turning into a reminder a
-// month early, which would look like the plugin inventing events.
-const maxReminderLead = 24 * time.Hour
+// maxLeadMinutes bounds every Lead Time, chosen or Server Default, so that a
+// mistyped value cannot produce Reminders hours early.
+const maxLeadMinutes = 60
 
 // errNotConfigured is what every user-facing path gets while the Yandex
 // application credentials are missing. It is deliberately a plain sentence:
@@ -57,18 +57,23 @@ func (c *configuration) Missing() []string {
 	return missing
 }
 
-// ReminderLead is how long before an Event its Reminder goes out. It is
-// server-wide on purpose: a per-user lead time multiplies the scheduling work
-// without answering a need anyone expressed.
-func (c *configuration) ReminderLead() time.Duration {
+// ServerDefaultLead is the Lead Time for everybody who has not chosen their
+// own. An empty or zero setting means the default, and it is capped at an
+// hour.
+func (c *configuration) ServerDefaultLead() time.Duration {
 	if c == nil || c.ReminderLeadMinutes <= 0 {
 		return defaultReminderLead
 	}
-	lead := time.Duration(c.ReminderLeadMinutes) * time.Minute
-	if lead > maxReminderLead {
-		return maxReminderLead
+	return time.Duration(min(c.ReminderLeadMinutes, maxLeadMinutes)) * time.Minute
+}
+
+// LeadTime is one person's Lead Time, and whether they chose it. Delivery and
+// everything that tells the person about it ask here, so they cannot disagree.
+func (c *configuration) LeadTime(settings Settings) (lead time.Duration, chosen bool) {
+	if settings.LeadMinutes != nil {
+		return time.Duration(*settings.LeadMinutes) * time.Minute, true
 	}
-	return lead
+	return c.ServerDefaultLead(), false
 }
 
 // getConfiguration returns the active configuration, never nil.

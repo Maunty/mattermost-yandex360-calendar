@@ -114,14 +114,15 @@ func (p *Plugin) welcome(connection *Connection) {
 	if err != nil {
 		settings = Settings{}
 	}
-	lead := humaniseLead(p.getConfiguration().ReminderLead())
+	lead, _ := p.getConfiguration().LeadTime(settings)
 
 	message := fmt.Sprintf(
 		"Your Yandex Calendar is connected as **%s**.\n\n"+
-			"I will send you a reminder %s before each event, and a summary of your day at %s in your own timezone.\n"+
-			"Run `/yacal settings` to change either, `/yacal today` to see today, and `/yacal disconnect` to stop.\n\n"+
+			"I will send you a reminder %s, and a summary of your day at %s in your own timezone.\n"+
+			"Run `/yacal reminders <minutes>` to choose how early reminders arrive, `/yacal settings` to see your choices, "+
+			"`/yacal today` to see today, and `/yacal disconnect` to stop.\n\n"+
 			"I only ever read your calendar.",
-		sanitise(connection.YandexLogin), lead, settings.SummaryTimeText())
+		sanitise(connection.YandexLogin), leadText(lead), settings.SummaryTimeText())
 
 	if err := p.dm(connection.MattermostUserID, &model.Post{Message: message}); err != nil {
 		p.client.Log.Warn("Could not send the welcome message", "error", err.Error())
