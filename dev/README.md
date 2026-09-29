@@ -69,8 +69,9 @@ browser* the person is consenting in, pointing at
 So the only thing that has to reach the server is the browser you are sitting
 in front of.
 
-What the server does need is **outbound** access, to `oauth.yandex.ru` to
-exchange the code for tokens and to `caldav.yandex.ru` to read calendars.
+What the server does need is **outbound** access: to `oauth.yandex.ru` to
+exchange the code for tokens and refresh them, to `login.yandex.ru` to learn
+which account connected, and to `cloud-api.yandex.net` to read calendars.
 Nothing inbound from the internet, ever.
 
 For a server on another machine, the tidiest arrangement is a tunnel:
