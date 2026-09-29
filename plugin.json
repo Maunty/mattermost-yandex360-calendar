@@ -5,7 +5,7 @@
     "homepage_url": "https://github.com/maunty/mattermost-yandex360-calendar",
     "support_url": "https://github.com/maunty/mattermost-yandex360-calendar/issues",
     "icon_path": "assets/icon.svg",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "min_server_version": "11.0.0",
     "server": {
         "executables": {
