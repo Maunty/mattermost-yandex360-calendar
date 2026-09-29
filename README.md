@@ -91,9 +91,10 @@ signature checks off, a default database password. `dev/README.md` says what
 that means and where not to put it.
 
 The setting that matters most is `MM_SITE_URL`. The plugin builds its OAuth
-redirect from it, and Yandex refuses a callback that is not
-character-for-character what the application has registered, so getting it
-wrong produces a connect flow that works until its very last step.
+redirect from it. If that isn't exactly what the application has registered,
+Yandex sends the browser to the application's first registered redirect
+instead, so getting it wrong produces a connect flow that works until its very
+last step.
 
 ## How it is put together
 

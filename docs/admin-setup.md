@@ -39,9 +39,13 @@ never type a password or a token into Mattermost.
    ```
 
    Use the same Site URL that is configured in your System Console, including
-   the scheme, and with no trailing slash before `/plugins`. If these do not
-   match character for character, every connection attempt fails at the last
-   step.
+   the scheme and any port, and with no trailing slash before `/plugins`.
+
+   Register it exactly. Yandex doesn't reject an address that doesn't match.
+   Instead it ignores the one the plugin asks for and sends people to the
+   first Redirect URI registered on the application. If that address doesn't
+   reach this Mattermost server, people approve access and then aren't
+   connected. If you register more than one Redirect URI, put this one first.
 5. Under **Data access**, add the scope **`calendar:events.read`** and nothing
    else. It is all the plugin needs, including for naming the account a person
    connected.
@@ -153,8 +157,12 @@ polls each person once and sends each message once. Nothing extra is needed.
 Client Secret is missing. The message names which.
 
 **Everyone's connection fails immediately after consent.** Almost always the
-redirect URI. It must match what is registered at Yandex character for
-character, including the scheme and the Site URL.
+redirect URI. When the plugin's address doesn't exactly match one registered
+at Yandex, Yandex sends the browser to the first registered Redirect URI
+instead, so look at where the browser lands after approving. It has to be this
+server's `/plugins/yandex-calendar/oauth/complete`, at an address the person's
+browser can reach. A registered `localhost` address sends everybody on other
+machines to their own computer.
 
 **A user consented but gets nothing, and `/yacal today` says it could not read
 their calendar.** Check two things. The scope on the Yandex application must be

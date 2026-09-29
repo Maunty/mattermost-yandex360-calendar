@@ -137,10 +137,14 @@ included.
 ## When it goes wrong
 
 **Connecting works until the last step, then fails.** Almost always
-`MM_SITE_URL`. The plugin builds its redirect from it, and Yandex refuses a
-callback that is not character-for-character what the application has
-registered. `localhost` when the server is on another machine is the usual
-version of this.
+`MM_SITE_URL`. The plugin builds its redirect from it. If that isn't exactly
+what the application has registered, Yandex sends the browser to the
+application's first registered redirect instead. `localhost` when the server
+is on another machine is the usual version of this.
+
+On `localhost`, Yandex was seen to accept the plugin's redirect even when only
+the port differed from the registered one. That matches the usual OAuth
+leniency for loopback addresses (RFC 8252). Don't rely on it anywhere else.
 
 **Yandex will not accept the redirect URI.** It may refuse a plain `http://`
 callback for a host that is not localhost. If it does, the options are putting
